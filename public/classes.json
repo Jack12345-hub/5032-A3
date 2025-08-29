@@ -1,0 +1,8 @@
+[
+  { "id": 1, "title": "Strength Training", "level": "Beginner", "duration": 45 },
+  { "id": 2, "title": "Cardio Blast", "level": "Intermediate", "duration": 30 },
+  { "id": 3, "title": "Yoga Flow", "level": "All", "duration": 60 },
+  { "id": 4, "title": "Pilates Core", "level": "Beginner", "duration": 40 },
+  { "id": 5, "title": "HIIT Express", "level": "Advanced", "duration": 25 },
+  { "id": 6, "title": "Spin Class", "level": "Intermediate", "duration": 50 }
+]
