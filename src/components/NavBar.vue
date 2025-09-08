@@ -8,6 +8,8 @@
         <li class="nav-item"><RouterLink to="/about" class="nav-link">About</RouterLink></li>
         <!-- New Firebase Login link -->
         <li class="nav-item"><RouterLink to="/firelogin" class="nav-link">Firebase Login</RouterLink></li>
+        <!-- New Firebase Register link -->
+        <li class="nav-item"><RouterLink to="/fireregister" class="nav-link">Register</RouterLink></li>
       </ul>
     </div>
   </nav>
