@@ -1,135 +1,93 @@
-<script setup>
-import { reactive, ref, computed } from "vue";
-
-const form = reactive({
-  name: "",
-  email: "",
-  age: ""
-});
-
-const touched = reactive({
-  name: false,
-  email: false,
-  age: false
-});
-
-function markTouched(field) {
-  touched[field] = true;
-}
-
-const errors = computed(() => {
-  const e = {};
-  // name
-  if (!form.name.trim()) e.name = "Name is required.";
-  // email
-  const emailOK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email);
-  if (!form.email) e.email = "Email is required.";
-  else if (!emailOK) e.email = "Email format is invalid.";
-  // age
-  const ageNum = Number(form.age);
-  if (form.age === "" || form.age === null) e.age = "Age is required.";
-  else if (Number.isNaN(ageNum)) e.age = "Age must be a number.";
-  else if (ageNum < 18 || ageNum > 65) e.age = "Age must be between 18 and 65.";
-  return e;
-});
-
-const isValid = computed(() => Object.keys(errors.value).length === 0);
-
-function submit() {
-  // mark all as touched to show errors if user clicks directly
-  Object.keys(touched).forEach(k => (touched[k] = true));
-  if (!isValid.value) return;
-  alert(`Submitted!\n${JSON.stringify(form, null, 2)}`);
-  // reset (optional)
-  form.name = "";
-  form.email = "";
-  form.age = "";
-  Object.keys(touched).forEach(k => (touched[k] = false));
-}
-</script>
-
 <template>
-  <section aria-labelledby="form-heading">
-    <h1 id="form-heading" class="mb-3">Register</h1>
-
-    <form @submit.prevent="submit" novalidate class="row g-3">
-      <!-- Name -->
-      <div class="col-12 col-md-6">
-        <label class="form-label" for="name">Name</label>
+  <div class="container py-4 text-start" style="max-width: 640px">
+    <h1 class="mb-3">Feedback Form</h1>
+    <form @submit.prevent="submit" novalidate>
+      <div class="mb-3">
+        <label class="form-label">Your name</label>
         <input
-          id="name"
           v-model.trim="form.name"
           class="form-control"
-          :class="{ 'is-invalid': touched.name && errors.name }"
-          @blur="markTouched('name')"
-          aria-describedby="nameHelp nameErr"
-          aria-invalid="true"
+          required
+          minlength="2"
+          maxlength="40"
+          placeholder="e.g., Alex"
         />
-        <div id="nameHelp" class="form-text">Please enter your full name.</div>
-        <div
-          id="nameErr"
-          v-if="touched.name && errors.name"
-          class="invalid-feedback d-block"
-          role="alert"
-          aria-live="polite"
-        >
-          {{ errors.name }}
-        </div>
+        <div class="form-text">2–40 characters.</div>
       </div>
 
-      <!-- Email -->
-      <div class="col-12 col-md-6">
-        <label class="form-label" for="email">Email</label>
+      <div class="mb-3">
+        <label class="form-label">Email</label>
         <input
-          id="email"
           v-model.trim="form.email"
+          class="form-control"
           type="email"
-          class="form-control"
-          :class="{ 'is-invalid': touched.email && errors.email }"
-          @blur="markTouched('email')"
+          required
           placeholder="name@example.com"
-          aria-describedby="emailErr"
         />
-        <div
-          id="emailErr"
-          v-if="touched.email && errors.email"
-          class="invalid-feedback d-block"
-          role="alert"
-          aria-live="polite"
-        >
-          {{ errors.email }}
-        </div>
       </div>
 
-      <!-- Age -->
-      <div class="col-12 col-md-6">
-        <label class="form-label" for="age">Age</label>
-        <input
-          id="age"
-          v-model.number="form.age"
-          type="number"
-          min="18"
-          max="65"
+      <div class="mb-3">
+        <label class="form-label">Message</label>
+        <textarea
+          v-model="form.message"
           class="form-control"
-          :class="{ 'is-invalid': touched.age && errors.age }"
-          @blur="markTouched('age')"
-          aria-describedby="ageErr"
-        />
-        <div
-          id="ageErr"
-          v-if="touched.age && errors.age"
-          class="invalid-feedback d-block"
-          role="alert"
-          aria-live="polite"
-        >
-          {{ errors.age }}
+          rows="4"
+          maxlength="300"
+          placeholder="Write your message (no HTML)"
+        ></textarea>
+        <div class="form-text d-flex justify-content-between">
+          <span>Preview (safe):</span>
+          <span class="text-muted">{{ form.message.length }}/300</span>
+        </div>
+        <!-- Safe preview using plain text interpolation -->
+        <div class="border rounded p-2 small bg-light mt-1">
+          {{ form.message }}
         </div>
       </div>
 
-      <!-- Submit -->
-      <div class="col-12">
-        <button class="btn btn-success" :disabled="!isValid">Submit</button>
-      </div>
+      <button class="btn btn-primary">Submit</button>
+      <span class="ms-2 text-success" v-if="ok">Submitted.</span>
+      <span class="ms-2 text-danger" v-if="err">{{ err }}</span>
     </form>
-  </section>
+  </div>
 </template>
+
+<script setup>
+import { ref } from "vue";
+
+// Local form state with basic client-side validation
+const form = ref({
+  name: "",
+  email: "",
+  message: "",
+});
+
+const ok = ref(false);
+const err = ref("");
+
+// Demo-only: persist to localStorage to avoid backend code
+function submit() {
+  ok.value = false;
+  err.value = "";
+
+  // Minimal runtime validation
+  if (!form.value.name || form.value.name.length < 2) {
+    err.value = "Name is too short.";
+    return;
+  }
+  if (!form.value.email) {
+    err.value = "Email is required.";
+    return;
+  }
+  // Store safely as plain JSON (no HTML rendering)
+  const list = JSON.parse(localStorage.getItem("feedback_v1") || "[]");
+  list.push({
+    name: form.value.name,
+    email: form.value.email,
+    message: form.value.message,
+    at: new Date().toISOString(),
+  });
+  localStorage.setItem("feedback_v1", JSON.stringify(list));
+  ok.value = true;
+}
+</script>
