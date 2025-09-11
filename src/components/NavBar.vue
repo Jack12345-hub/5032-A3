@@ -27,7 +27,7 @@
             <RouterLink to="/about" class="nav-link">About</RouterLink>
           </li>
 
-          <!-- Show login/register when not signed in -->
+          <!-- Show Login/Register when not authenticated -->
           <li class="nav-item" v-if="!session.isAuthed">
             <RouterLink to="/firelogin" class="nav-link">Login</RouterLink>
           </li>
@@ -35,12 +35,12 @@
             <RouterLink to="/fireregister" class="nav-link">Register</RouterLink>
           </li>
 
-          <!-- Admin link visible only for admin role -->
+          <!-- Admin link only for admin role -->
           <li class="nav-item" v-if="session.isAdmin">
             <RouterLink to="/admin" class="nav-link">Admin</RouterLink>
           </li>
 
-          <!-- Logout + current user -->
+          <!-- Email + Logout when authenticated -->
           <li class="nav-item d-flex align-items-center" v-if="session.isAuthed">
             <span class="navbar-text small me-2">
               {{ session.profile?.email || session.user?.email }}
@@ -56,15 +56,27 @@
 </template>
 
 <script setup>
+// Router is used to redirect to the login page after logout
+import { useRouter } from "vue-router";
+// Firebase sign-out API
 import { signOut } from "firebase/auth";
+// Shared Firebase instance
 import { auth } from "../firebase";
+// Reactive session store used by the UI
 import { session } from "../store/session";
 
+// Sign out and immediately clear local session, then redirect to login
+const router = useRouter();
 async function doLogout() {
   try {
-    await signOut(auth);
+    await signOut(auth); // sign out from Firebase
   } catch (e) {
-    console.error("Logout failed:", e);
+    // log but do not block UI update
+    console.error("signOut failed:", e);
+  } finally {
+    session.user = null;
+    session.profile = null;
+    router.push("/firelogin"); // go to login page
   }
 }
 </script>
