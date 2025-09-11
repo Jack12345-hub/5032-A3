@@ -1,63 +1,50 @@
 <template>
-  <div class="container mt-4" style="max-width: 400px;">
-    <h2>Create an Account</h2>
+  <div class="container" style="max-width:480px">
+    <h2>Register</h2>
+    <form @submit.prevent="onSubmit" novalidate>
+      <label class="form-label">Email</label>
+      <input class="form-control" v-model.trim="email" type="email" required />
 
-    <!-- Email input -->
-    <div class="mb-3">
-      <input
-        type="email"
-        class="form-control"
-        placeholder="Email"
-        v-model="email"
-      />
-    </div>
+      <label class="form-label mt-2">Password</label>
+      <input class="form-control" v-model="password" type="password"
+             required pattern="(?=.*[A-Z])(?=.*[a-z])(?=.*\\d).{6,}"
+             title="≥6位，含大小写字母和数字"/>
 
-    <!-- Password input -->
-    <div class="mb-3">
-      <input
-        type="password"
-        class="form-control"
-        placeholder="Password"
-        v-model="password"
-      />
-    </div>
+      <label class="form-label mt-2">Role</label>
+      <select class="form-select" v-model="role">
+        <option value="user">user</option>
+        <option value="admin">admin</option>
+      </select>
 
-    <!-- Register button -->
-    <div class="d-grid">
-      <button class="btn btn-primary" @click="register">Save to Firebase</button>
-    </div>
-
-    <!-- Error message -->
-    <p v-if="error" class="text-danger mt-2">Error: {{ error }}</p>
+      <button class="btn btn-primary mt-3" :disabled="loading">Create account</button>
+      <p class="text-success mt-2" v-if="ok">Registered! You can sign in now.</p>
+      <p class="text-danger mt-2" v-if="err">{{ err }}</p>
+    </form>
   </div>
 </template>
 
 <script setup>
-import { ref } from "vue"
-import { getAuth, createUserWithEmailAndPassword } from "firebase/auth"
-import { useRouter } from "vue-router"
+import { ref } from "vue";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, serverTimestamp, setDoc } from "firebase/firestore";
+import { auth, db } from "../firebase";
 
-// form values
-const email = ref("")
-const password = ref("")
-const error = ref("")
+const email = ref(""); const password = ref(""); const role = ref("user");
+const loading = ref(false); const ok = ref(false); const err = ref("");
 
-// router for redirect after register
-const router = useRouter()
-const auth = getAuth()
-
-// register function
-const register = () => {
-  error.value = ""
-  createUserWithEmailAndPassword(auth, email.value, password.value)
-    .then((data) => {
-      console.log("Firebase Register Successful!", data)
-      // redirect to login page after success
-      router.push("/firelogin")
-    })
-    .catch((err) => {
-      console.error("Firebase Register Error:", err.code)
-      error.value = err.code
-    })
+async function onSubmit() {
+  loading.value = true; ok.value = false; err.value = "";
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email.value, password.value);
+    await setDoc(doc(db, "users", cred.user.uid), {
+      uid: cred.user.uid,
+      email: cred.user.email,
+      role: role.value,              // <—— 角色写入
+      createdAt: serverTimestamp(),
+    });
+    ok.value = true;
+  } catch (e) {
+    err.value = e.message || String(e);
+  } finally { loading.value = false; }
 }
 </script>

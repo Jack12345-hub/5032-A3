@@ -1,67 +1,38 @@
-<!-- src/views/FirebaseSigninView.vue -->
 <template>
-  <div class="container" style="max-width: 420px;">
-    <h2 class="mt-4 mb-3">Sign in</h2>
-
-    <div class="mb-3">
-      <input
-        v-model="email"
-        type="email"
-        class="form-control"
-        placeholder="Email"
-      />
-    </div>
-
-    <div class="mb-3">
-      <input
-        v-model="password"
-        type="password"
-        class="form-control"
-        placeholder="Password"
-      />
-    </div>
-
-    <div class="d-flex gap-2 mb-2">
-      <button class="btn btn-primary" @click="signin">Sign in via Firebase</button>
-      <RouterLink class="btn btn-outline-secondary ms-auto" to="/fireregister">Go to Register</RouterLink>
-    </div>
-
-    <p v-if="error" class="text-danger">Error: {{ error }}</p>
-    <p v-if="user" class="text-success">Signed in as: <strong>{{ user.email }}</strong></p>
+  <div class="container" style="max-width:480px">
+    <h2>Sign in</h2>
+    <form @submit.prevent="onSubmit" novalidate>
+      <label class="form-label">Email</label>
+      <input class="form-control" v-model.trim="email" type="email" required />
+      <label class="form-label mt-2">Password</label>
+      <input class="form-control" v-model="password" type="password" required />
+      <button class="btn btn-primary mt-3" :disabled="loading">Sign in</button>
+      <p class="text-danger mt-2" v-if="err">{{ err }}</p>
+    </form>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue"
-import { useRouter, RouterLink } from "vue-router"
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth"
+import { ref } from "vue";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { useRouter } from "vue-router";
+import { auth, db } from "../firebase";
+import { session } from "../store/session";
 
-const email = ref("")
-const password = ref("")
-const error = ref("")
-const user = ref(null)
+const router = useRouter();
+const email = ref(""); const password = ref(""); const loading = ref(false); const err = ref("");
 
-const router = useRouter()
-const auth = getAuth()
-
-// keep UI synchronized with the current authentication state
-onMounted(() => {
-  onAuthStateChanged(auth, (u) => {
-    user.value = u
-    if (u) console.log("Current user:", u) // log the current signed-in user
-  })
-})
-
-async function signin() {
-  error.value = ""
+async function onSubmit() {
+  loading.value = true; err.value = "";
   try {
-    await signInWithEmailAndPassword(auth, email.value, password.value)
-    console.log("Firebase Sign-in Successful!")
-    console.log("auth.currentUser:", auth.currentUser) // log the current user object
-    router.push("/") // redirect to Home after successful login
+    const cred = await signInWithEmailAndPassword(auth, email.value, password.value);
+    const snap = await getDoc(doc(db, "users", cred.user.uid));
+    session.user = cred.user;
+    session.profile = snap.exists() ? snap.data() : { uid: cred.user.uid, email: cred.user.email, role: "user" };
+    router.push("/");
   } catch (e) {
-    console.error(e)
-    error.value = e.code || e.message // show error message if sign-in fails
-  }
+    err.value = e.message || String(e);
+  } finally { loading.value = false; }
 }
 </script>
