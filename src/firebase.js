@@ -4,8 +4,9 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-// 如果你已经在 main.js 初始化过（是的！），这里复用，不会重复 init
-const firebaseConfig = {}; // 留空：我们只复用已初始化的 app
+// If Firebase has already been initialized in main.js (which it has),
+// reuse the existing app instance to avoid re-initialization
+const firebaseConfig = {}; // Leave empty: we only reuse the initialized app
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);

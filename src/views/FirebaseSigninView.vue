@@ -21,18 +21,25 @@ import { auth, db } from "../firebase";
 import { session } from "../store/session";
 
 const router = useRouter();
-const email = ref(""); const password = ref(""); const loading = ref(false); const err = ref("");
+const email = ref(""); 
+const password = ref(""); 
+const loading = ref(false); 
+const err = ref("");
 
+// Sign in and load user profile from Firestore
 async function onSubmit() {
   loading.value = true; err.value = "";
   try {
     const cred = await signInWithEmailAndPassword(auth, email.value, password.value);
     const snap = await getDoc(doc(db, "users", cred.user.uid));
     session.user = cred.user;
+    // Load user profile from Firestore or default to user role
     session.profile = snap.exists() ? snap.data() : { uid: cred.user.uid, email: cred.user.email, role: "user" };
     router.push("/");
   } catch (e) {
     err.value = e.message || String(e);
-  } finally { loading.value = false; }
+  } finally { 
+    loading.value = false; 
+  }
 }
 </script>

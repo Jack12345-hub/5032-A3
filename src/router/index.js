@@ -4,7 +4,7 @@ import Form from "../views/Form.vue";
 import About from "../views/About.vue";
 import FirebaseSigninView from "../views/FirebaseSigninView.vue";
 import FirebaseRegisterView from "../views/FirebaseRegisterView.vue";
-import Admin from "../views/Admin.vue"; // 新建一个简单页
+import Admin from "../views/Admin.vue"; // simple admin page
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../firebase";
@@ -16,13 +16,13 @@ const routes = [
   { path: "/about", name: "About", component: About },
   { path: "/firelogin", name: "FireLogin", component: FirebaseSigninView, meta: { public: true } },
   { path: "/fireregister", name: "FireRegister", component: FirebaseRegisterView, meta: { public: true } },
-  { path: "/admin", name: "Admin", component: Admin, meta: { role: "admin" } },   // 需要管理员
+  { path: "/admin", name: "Admin", component: Admin, meta: { role: "admin" } },   // requires admin role
   { path: "/:pathMatch(.*)*", redirect: "/" },
 ];
 
 const router = createRouter({ history: createWebHistory(), routes });
 
-// 等待一次性恢复登录态（刷新后的场景）
+// Wait for authentication state to restore once (e.g., after page refresh)
 let authReady;
 function ensureAuthReady() {
   if (authReady) return authReady;
@@ -34,7 +34,8 @@ function ensureAuthReady() {
         const snap = await getDoc(doc(db, "users", u.uid));
         session.profile = snap.exists() ? snap.data() : { uid: u.uid, email: u.email, role: "user" };
       }
-      stop(); resolve();
+      stop();
+      resolve();
     });
   });
   return authReady;

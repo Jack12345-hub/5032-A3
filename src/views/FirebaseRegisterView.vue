@@ -8,7 +8,7 @@
       <label class="form-label mt-2">Password</label>
       <input class="form-control" v-model="password" type="password"
              required pattern="(?=.*[A-Z])(?=.*[a-z])(?=.*\\d).{6,}"
-             title="≥6位，含大小写字母和数字"/>
+             title="At least 6 chars, must include uppercase, lowercase and number"/>
 
       <label class="form-label mt-2">Role</label>
       <select class="form-select" v-model="role">
@@ -29,9 +29,14 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { auth, db } from "../firebase";
 
-const email = ref(""); const password = ref(""); const role = ref("user");
-const loading = ref(false); const ok = ref(false); const err = ref("");
+const email = ref(""); 
+const password = ref(""); 
+const role = ref("user");
+const loading = ref(false); 
+const ok = ref(false); 
+const err = ref("");
 
+// Register a new user and store their role in Firestore
 async function onSubmit() {
   loading.value = true; ok.value = false; err.value = "";
   try {
@@ -39,12 +44,14 @@ async function onSubmit() {
     await setDoc(doc(db, "users", cred.user.uid), {
       uid: cred.user.uid,
       email: cred.user.email,
-      role: role.value,              // <—— 角色写入
+      role: role.value,              // store user role
       createdAt: serverTimestamp(),
     });
     ok.value = true;
   } catch (e) {
     err.value = e.message || String(e);
-  } finally { loading.value = false; }
+  } finally { 
+    loading.value = false; 
+  }
 }
 </script>
