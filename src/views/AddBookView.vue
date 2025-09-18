@@ -38,7 +38,7 @@
 import { ref } from "vue";
 
 // Firestore instance
-import db from "../firebase/init";
+import { db } from "../firebase/init";
 // Firestore helpers
 import { collection, addDoc } from "firebase/firestore";
 
