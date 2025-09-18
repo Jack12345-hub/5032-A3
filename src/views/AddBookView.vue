@@ -1,9 +1,9 @@
 <template>
   <div class="container py-3">
-    <h1>Add Book</h1>
+    <h1 class="mb-4">Add Book</h1>
 
-    <!-- prevent page reload and call addBook() -->
-    <form @submit.prevent="addBook">
+    <!-- Form to add new book -->
+    <form @submit.prevent="addBook" class="mb-4">
       <div class="mb-3">
         <label for="isbn" class="form-label">ISBN (number)</label>
         <input
@@ -30,38 +30,41 @@
 
       <button type="submit" class="btn btn-primary">Add Book</button>
     </form>
+
+    <!-- Display the BookList component (query + update + delete) -->
+    <BookList />
   </div>
 </template>
 
 <script setup>
-// Vue reactivity
 import { ref } from "vue";
-
-// Firestore instance
-import { db } from "../firebase/init";
-// Firestore helpers
+import { db } from "../firebase/init"; 
 import { collection, addDoc } from "firebase/firestore";
 
-// local state
+// Import BookList component
+import BookList from "../components/BookList.vue";
+
+// Local reactive state for the form
 const isbn = ref("");
 const name = ref("");
 
-// add a new document to "books" collection
+// Add a new book document to the "books" collection
 const addBook = async () => {
   try {
-    // ensure isbn is saved as a number
+    // Ensure ISBN is a number
     const isbnNumber = Number(isbn.value);
     if (isNaN(isbnNumber)) {
       alert("ISBN must be a valid number");
       return;
     }
 
+    // Add document to Firestore
     await addDoc(collection(db, "books"), {
-      isbn: isbnNumber, // saved as number
-      name: name.value
+      isbn: isbnNumber,
+      name: name.value,
     });
 
-    // reset form and notify
+    // Reset form and notify
     isbn.value = "";
     name.value = "";
     alert("Book added successfully!");
