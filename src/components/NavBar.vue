@@ -27,6 +27,13 @@
             <RouterLink to="/about" class="nav-link">About</RouterLink>
           </li>
 
+          <!-- ✅ New: Add Book page -->
+          <li class="nav-item">
+            <RouterLink to="/addbook" class="nav-link" active-class="active">
+              Add Book
+            </RouterLink>
+          </li>
+
           <!-- Show Login/Register when not authenticated -->
           <li class="nav-item" v-if="!session.isAuthed">
             <RouterLink to="/firelogin" class="nav-link">Login</RouterLink>
