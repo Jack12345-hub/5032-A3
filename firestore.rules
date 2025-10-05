@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // users: only the owner can read/write
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // ratings: public read; user can manage own rating doc
+    match /ratings/{itemId}/userRatings/{uid} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // 🔥 books: public read/write 
+    match /books/{doc} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}
+

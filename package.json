@@ -1,21 +1,38 @@
 {
   "name": "vue-v1",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "description": "A Vue + Firebase project with Node.js Express server for FIT5032 eFolio 9.1",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "node server.js",
+    "serve": "npm run dev"
   },
   "dependencies": {
     "bootstrap": "^5.3.8",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
     "firebase": "^12.2.1",
+    "firebase-admin": "^13.5.0",
+    "firebase-functions": "^6.4.0",
     "vue": "^3.5.18",
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",
     "vite": "^7.1.2"
-  }
+  },
+  "keywords": [
+    "vue",
+    "vite",
+    "express",
+    "firebase",
+    "nodejs",
+    "fit5032"
+  ],
+  "author": "",
+  "license": "MIT"
 }
