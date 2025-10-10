@@ -34,6 +34,13 @@
             </RouterLink>
           </li>
 
+          <!-- ✅ New: Book Counter page -->
+          <li class="nav-item">
+            <RouterLink to="/GetBookCount" class="nav-link" active-class="active">
+              Book Counter
+            </RouterLink>
+          </li>
+
           <!-- Show Login/Register when not authenticated -->
           <li class="nav-item" v-if="!session.isAuthed">
             <RouterLink to="/firelogin" class="nav-link">Login</RouterLink>

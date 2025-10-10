@@ -5,10 +5,11 @@ import { createRouter, createWebHistory } from "vue-router";
 import Home from "../views/Home.vue";
 import Form from "../views/Form.vue";
 import About from "../views/About.vue";
-import AddBookView from "../views/AddBookView.vue";          // ✅ new page for Task 8.1
+import AddBookView from "../views/AddBookView.vue";          // ✅ Task 8.1 page
 import FirebaseSigninView from "../views/FirebaseSigninView.vue";
 import FirebaseRegisterView from "../views/FirebaseRegisterView.vue";
-import Admin from "../views/Admin.vue"; // simple admin page
+import Admin from "../views/Admin.vue"; // Simple admin page
+import GetBookCountView from "../views/GetBookCountView.vue"; // ✅ NEW: 9.2/9.3 Book counter page
 
 // Auth & Firestore
 import { onAuthStateChanged } from "firebase/auth";
@@ -24,17 +25,20 @@ const routes = [
 
   { path: "/about", name: "About", component: About },
 
-  // ✅ Public route to add a book (for eFolio Task 8.1 screenshots)
+  // ✅ Public route for adding a book (for eFolio Task 8.1 screenshots)
   { path: "/addbook", name: "AddBook", component: AddBookView, meta: { public: true } },
 
-  // Auth pages are public
+  // ✅ NEW: Book counter page (9.2/9.3). Set as public for testing before login or Cloud Function setup
+  { path: "/GetBookCount", name: "GetBookCount", component: GetBookCountView, meta: { public: true } },
+
+  // Public authentication pages
   { path: "/firelogin", name: "FireLogin", component: FirebaseSigninView, meta: { public: true } },
   { path: "/fireregister", name: "FireRegister", component: FirebaseRegisterView, meta: { public: true } },
 
-  // Admin requires admin role
+  // Admin route requires admin role
   { path: "/admin", name: "Admin", component: Admin, meta: { role: "admin" } },
 
-  // Fallback
+  // Fallback route
   { path: "/:pathMatch(.*)*", redirect: "/" }
 ];
 
@@ -43,19 +47,19 @@ const router = createRouter({
   routes
 });
 
-// -------------------- Auth bootstrap --------------------
-// Ensure we restore Firebase auth state once (useful after hard refresh)
+// -------------------- Auth Initialization --------------------
+// Ensure Firebase authentication state is restored (useful after hard refresh)
 let authReady;
 function ensureAuthReady() {
   if (authReady) return authReady;
 
   authReady = new Promise((resolve) => {
     const stop = onAuthStateChanged(auth, async (u) => {
-      // Keep session store in sync with Firebase auth
+      // Keep session store synced with Firebase authentication state
       session.user = u || null;
       session.profile = null;
 
-      // If logged in, hydrate profile from Firestore "users/{uid}"
+      // If logged in, fetch user profile from Firestore "users/{uid}"
       if (u) {
         try {
           const snap = await getDoc(doc(db, "users", u.uid));
@@ -76,20 +80,20 @@ function ensureAuthReady() {
   return authReady;
 }
 
-// -------------------- Global guard --------------------
+// -------------------- Global Route Guard --------------------
 router.beforeEach(async (to) => {
-  // Allow public routes without waiting for auth
+  // Allow all public routes without authentication
   if (to.meta?.public) return true;
 
-  // For protected routes, make sure auth state is restored
+  // Wait for Firebase auth state before accessing protected routes
   await ensureAuthReady();
 
-  // If not authenticated, redirect to login and preserve destination
+  // Redirect unauthenticated users to login, keeping the intended destination
   if (!session.isAuthed) {
     return { name: "FireLogin", query: { next: to.fullPath } };
   }
 
-  // If a route requires a specific role, check it
+  // Check role-based access (e.g., admin)
   if (to.meta?.role === "admin" && !session.isAdmin) {
     return { name: "Home" };
   }
