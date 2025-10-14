@@ -10,6 +10,9 @@ import FirebaseSigninView from "../views/FirebaseSigninView.vue";
 import FirebaseRegisterView from "../views/FirebaseRegisterView.vue";
 import Admin from "../views/Admin.vue"; // Simple admin page
 import GetBookCountView from "../views/GetBookCountView.vue"; // ✅ NEW: 9.2/9.3 Book counter page
+import WeatherView from "../views/WeatherView.vue"; // ← Newly added
+import CountBookAPI from "../views/CountBookAPI.vue";
+import GetAllBookAPI from "../views/GetAllBookAPI.vue";
 
 // Auth & Firestore
 import { onAuthStateChanged } from "firebase/auth";
@@ -28,7 +31,7 @@ const routes = [
   // ✅ Public route for adding a book (for eFolio Task 8.1 screenshots)
   { path: "/addbook", name: "AddBook", component: AddBookView, meta: { public: true } },
 
-  // ✅ NEW: Book counter page (9.2/9.3). Set as public for testing before login or Cloud Function setup
+  // ✅ NEW: Book counter page (9.2/9.3). Public for testing before login or Cloud Function setup
   { path: "/GetBookCount", name: "GetBookCount", component: GetBookCountView, meta: { public: true } },
 
   // Public authentication pages
@@ -38,24 +41,45 @@ const routes = [
   // Admin route requires admin role
   { path: "/admin", name: "Admin", component: Admin, meta: { role: "admin" } },
 
-  // Fallback route
-  { path: "/:pathMatch(.*)*", redirect: "/" }
+  {
+    path: "/WeatherCheck",   // ← Consistent with course material
+    name: "WeatherCheck",
+    component: WeatherView,
+    meta: { public: true },
+  },
+
+  {
+    path: "/CountBookAPI",
+    name: "CountBookAPI",
+    component: CountBookAPI,
+    meta: { public: true }, // ← Public for easy access by tutors for screenshots
+  },
+
+  {
+    path: "/GetAllBookAPI",
+    name: "GetAllBookAPI",
+    component: GetAllBookAPI,
+    meta: { public: true }, // or meta: { public: true, hideHeader: true } if you want to hide the header
+  },
+
+  // Fallback route for unknown paths
+  { path: "/:pathMatch(.*)*", redirect: "/" },
 ];
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
 });
 
 // -------------------- Auth Initialization --------------------
-// Ensure Firebase authentication state is restored (useful after hard refresh)
+// Ensures Firebase authentication state is restored (useful after a hard refresh)
 let authReady;
 function ensureAuthReady() {
   if (authReady) return authReady;
 
   authReady = new Promise((resolve) => {
     const stop = onAuthStateChanged(auth, async (u) => {
-      // Keep session store synced with Firebase authentication state
+      // Keep the session store synchronized with Firebase authentication state
       session.user = u || null;
       session.profile = null;
 
@@ -82,13 +106,13 @@ function ensureAuthReady() {
 
 // -------------------- Global Route Guard --------------------
 router.beforeEach(async (to) => {
-  // Allow all public routes without authentication
+  // Allow access to all public routes without authentication
   if (to.meta?.public) return true;
 
   // Wait for Firebase auth state before accessing protected routes
   await ensureAuthReady();
 
-  // Redirect unauthenticated users to login, keeping the intended destination
+  // Redirect unauthenticated users to the login page, keeping their intended destination
   if (!session.isAuthed) {
     return { name: "FireLogin", query: { next: to.fullPath } };
   }
