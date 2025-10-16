@@ -58,7 +58,7 @@
           </li>
 
           <!-- 被你注释掉的菜单保持不变 -->
-           !-- ✅ 暂时隐藏 Add Book、Book Counter、API 等导航项 -->
+          <!-- ✅ 暂时隐藏 Add Book、Book Counter、API 等导航项 -->
 <!--
 <li class="nav-item">
   <RouterLink to="/addbook" class="nav-link" active-class="active">
