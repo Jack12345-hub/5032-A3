@@ -13,6 +13,8 @@ import GetBookCountView from "../views/GetBookCountView.vue"; // ✅ NEW: 9.2/9.
 import WeatherView from "../views/WeatherView.vue"; // ← Newly added
 import CountBookAPI from "../views/CountBookAPI.vue";
 import GetAllBookAPI from "../views/GetAllBookAPI.vue";
+import MembersTable from "@/views/MembersTable.vue";
+import ClassesTable from "@/views/ClassesTable.vue";
 
 // Auth & Firestore
 import { onAuthStateChanged } from "firebase/auth";
@@ -22,6 +24,10 @@ import { session } from "../store/session";
 
 // -------------------- Routes --------------------
 const routes = [
+  
+  { path: "/members", component: MembersTable },
+  { path: "/classes", component: ClassesTable },
+  
   { path: "/", name: "Home", component: Home },
 
   { path: "/form", name: "Form", component: Form },
