@@ -20,6 +20,19 @@
           <li class="nav-item">
             <RouterLink to="/" class="nav-link">Home</RouterLink>
           </li>
+
+<li class="nav-item">
+  <RouterLink to="/members" class="nav-link" active-class="active">
+    Members
+  </RouterLink>
+</li>
+
+<li class="nav-item">
+  <RouterLink to="/classes" class="nav-link" active-class="active">
+    Classes
+  </RouterLink>
+</li>
+
           <li class="nav-item">
             <RouterLink to="/form" class="nav-link">Form</RouterLink>
           </li>
@@ -27,43 +40,44 @@
             <RouterLink to="/about" class="nav-link">About</RouterLink>
           </li>
 
-          <!-- ✅ New: Add Book page -->
-          <li class="nav-item">
-            <RouterLink to="/addbook" class="nav-link" active-class="active">
-              Add Book
-            </RouterLink>
-          </li>
+           <!-- ✅ 暂时隐藏 Add Book、Book Counter、API 等导航项 -->
+<!--
+<li class="nav-item">
+  <RouterLink to="/addbook" class="nav-link" active-class="active">
+    Add Book
+  </RouterLink>
+</li>
 
-          <!-- ✅ New: Book Counter page -->
-          <li class="nav-item">
-            <RouterLink to="/GetBookCount" class="nav-link" active-class="active">
-              Book Counter
-            </RouterLink>
-          </li>
-          
-          <li class="nav-item">
-            <router-link to="/GetBookCount" class="nav-link" active-class="active">
-              Get Book Count
-            </router-link>
-          </li>
+<li class="nav-item">
+  <RouterLink to="/GetBookCount" class="nav-link" active-class="active">
+    Book Counter
+  </RouterLink>
+</li>
 
-          <li class="nav-item">
-            <router-link to="/WeatherCheck" class="nav-link" active-class="active">
-              Get Weather
-            </router-link>
-          </li>
+<li class="nav-item">
+  <router-link to="/GetBookCount" class="nav-link" active-class="active">
+    Get Book Count
+  </router-link>
+</li>
 
-          <li class="nav-item">
-            <router-link to="/CountBookAPI" class="nav-link" active-class="active">
-              Count Book API
-            </router-link>
-          </li>
+<li class="nav-item">
+  <router-link to="/WeatherCheck" class="nav-link" active-class="active">
+    Get Weather
+  </router-link>
+</li>
 
-          <li class="nav-item">
-            <router-link to="/GetAllBookAPI" class="nav-link" active-class="active">
-              Get All Book API
-            </router-link>
-          </li>
+<li class="nav-item">
+  <router-link to="/CountBookAPI" class="nav-link" active-class="active">
+    Count Book API
+  </router-link>
+</li>
+
+<li class="nav-item">
+  <router-link to="/GetAllBookAPI" class="nav-link" active-class="active">
+    Get All Book API
+  </router-link>
+</li>
+-->
 
           <li class="nav-item">
   <RouterLink class="nav-link" :to="{ name: 'email-test' }">Email Test</RouterLink>
