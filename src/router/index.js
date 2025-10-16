@@ -15,6 +15,8 @@ import CountBookAPI from "../views/CountBookAPI.vue";
 import GetAllBookAPI from "../views/GetAllBookAPI.vue";
 import MembersTable from "../views/MembersTable.vue";
 import ClassesTable from "../views/ClassesTable.vue";
+import MapView from "../views/MapView.vue";
+
 
 // Auth & Firestore
 import { onAuthStateChanged } from "firebase/auth";
@@ -25,6 +27,7 @@ import { session } from "../store/session";
 // -------------------- Routes --------------------
 const routes = [
   
+  { path: "/map", name: "Map", component: MapView },
   { path: "/members", component: MembersTable },
   { path: "/classes", component: ClassesTable },
   
