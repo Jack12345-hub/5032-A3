@@ -62,6 +62,15 @@ const routes = [
     meta: { public: true }, // or meta: { public: true, hideHeader: true } if you want to hide the header
   },
 
+  //email
+  { 
+  path: '/email-test',
+  name: 'email-test',
+  component: () => import('../components/SendgridForm.vue'),
+  meta: { public: true }            // ✅ 关键！
+},
+
+
   // Fallback route for unknown paths
   { path: "/:pathMatch(.*)*", redirect: "/" },
 ];

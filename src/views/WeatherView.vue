@@ -104,7 +104,7 @@ export default {
       }
     },
   },
-};S
+};
 </script>
 
 <style scoped>

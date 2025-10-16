@@ -65,6 +65,10 @@
             </router-link>
           </li>
 
+          <li class="nav-item">
+  <RouterLink class="nav-link" :to="{ name: 'email-test' }">Email Test</RouterLink>
+</li>
+
           <!-- Show Login/Register when not authenticated -->
           <li class="nav-item" v-if="!session.isAuthed">
             <RouterLink to="/firelogin" class="nav-link">Login</RouterLink>
