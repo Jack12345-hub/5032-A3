@@ -18,6 +18,7 @@ import ClassesTable from "../views/ClassesTable.vue";
 import MapView from "../views/MapView.vue";
 import BookClasses from "../views/BookClasses.vue";
 import Analytics from "../views/Analytics.vue";
+import PublicClasses from '../views/PublicClasses.vue';
 
 
 // Auth & Firestore
@@ -34,6 +35,7 @@ const routes = [
   { path: "/classes", component: ClassesTable },
   { path: "/book", name: "BookClasses", component: BookClasses },
   { path: "/analytics", name: "Analytics", component: Analytics },
+  { path: '/public-classes', name: 'public-classes', component: PublicClasses },
 
   
   { path: "/", name: "Home", component: Home },

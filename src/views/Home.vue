@@ -1,6 +1,6 @@
 <template>
   <div class="container py-4 text-start">
-    <h1 class="mb-3">Available Classes</h1>
+    <h1 class="mb-3">Classes list</h1>
 
     <div v-if="!loaded" class="text-muted">Loading...</div>
 

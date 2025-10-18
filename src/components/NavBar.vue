@@ -6,7 +6,7 @@
        role="navigation"
        aria-label="Main navigation">
     <div class="container">
-      <RouterLink to="/" class="navbar-brand" aria-label="Go to Home">My Vue App</RouterLink>
+      <RouterLink to="/" class="navbar-brand" aria-label="Go to Home">My Gym App</RouterLink>
 
       <button
         class="navbar-toggler"
@@ -57,53 +57,16 @@
             </RouterLink>
           </li>
 
-          <!-- 被你注释掉的菜单保持不变 -->
-          <!-- ✅ 暂时隐藏 Add Book、Book Counter、API 等导航项 -->
-<!--
-<li class="nav-item">
-  <RouterLink to="/addbook" class="nav-link" active-class="active">
-    Add Book
-  </RouterLink>
-</li>
-
-<li class="nav-item">
-  <RouterLink to="/GetBookCount" class="nav-link" active-class="active">
-    Book Counter
-  </RouterLink>
-</li>
-
-<li class="nav-item">
-  <router-link to="/GetBookCount" class="nav-link" active-class="active">
-    Get Book Count
-  </router-link>
-</li>
-
-<li class="nav-item">
-  <router-link to="/WeatherCheck" class="nav-link" active-class="active">
-    Get Weather
-  </router-link>
-</li>
-
-<li class="nav-item">
-  <router-link to="/CountBookAPI" class="nav-link" active-class="active">
-    Count Book API
-  </router-link>
-</li>
-
-<li class="nav-item">
-  <router-link to="/GetAllBookAPI" class="nav-link" active-class="active">
-    Get All Book API
-  </router-link>
-</li>
--->
-
-// NavBar.vue 增加
 <li class="nav-item">
   <RouterLink to="/book" class="nav-link">Book</RouterLink>
 </li>    
 
 <li class="nav-item">
   <RouterLink to="/analytics" class="nav-link">Analytics</RouterLink>
+</li>
+
+<li class="nav-item">
+<router-link to="/public-classes" class="nav-link">Public API</router-link>
 </li>
 
 <li class="nav-item" role="none">
@@ -181,3 +144,44 @@ async function doLogout() {
   border-radius: 6px;
 }
 </style>
+
+          <!-- 被你注释掉的菜单保持不变 -->
+          <!-- ✅ 暂时隐藏 Add Book、Book Counter、API 等导航项 -->
+<!--
+<li class="nav-item">
+  <RouterLink to="/addbook" class="nav-link" active-class="active">
+    Add Book
+  </RouterLink>
+</li>
+
+<li class="nav-item">
+  <RouterLink to="/GetBookCount" class="nav-link" active-class="active">
+    Book Counter
+  </RouterLink>
+</li>
+
+<li class="nav-item">
+  <router-link to="/GetBookCount" class="nav-link" active-class="active">
+    Get Book Count
+  </router-link>
+</li>
+
+<li class="nav-item">
+  <router-link to="/WeatherCheck" class="nav-link" active-class="active">
+    Get Weather
+  </router-link>
+</li>
+
+<li class="nav-item">
+  <router-link to="/CountBookAPI" class="nav-link" active-class="active">
+    Count Book API
+  </router-link>
+</li>
+
+<li class="nav-item">
+  <router-link to="/GetAllBookAPI" class="nav-link" active-class="active">
+    Get All Book API
+  </router-link>
+</li>
+-->
+

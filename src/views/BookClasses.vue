@@ -1,65 +1,97 @@
 <template>
-  <div class="wrap">
-    <h2>📅 Book a Class</h2>
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <main id="main" class="wrap" tabindex="-1">
+    <h1>📅 Book a Class</h1>
 
     <!-- 状态提示 -->
-    <p v-if="loading">Loading...</p>
-    <p v-if="err" class="text-danger">{{ err }}</p>
-    <p v-if="msg" :class="{ ok: ok, err: !ok }" aria-live="assertive">{{ msg }}</p>
+    <p v-if="loading" role="status" aria-live="polite">Loading...</p>
+    <p v-if="err" class="text-danger" role="alert">{{ err }}</p>
+    <p
+      v-if="msg"
+      :class="{ ok: ok, err: !ok }"
+      role="status"
+      aria-live="polite"
+    >
+      {{ msg }}
+    </p>
 
     <!-- 无课程时：一键灌入示例数据 -->
-    <div v-if="!loading && classes.length === 0" class="empty">
-      <p>No classes found in Firestore.</p>
+    <div
+      v-if="!loading && classes.length === 0"
+      class="empty"
+      role="region"
+      aria-labelledby="emptyTitle"
+    >
+      <p id="emptyTitle">No classes found in Firestore.</p>
       <button @click="seedClasses">Seed demo classes</button>
     </div>
 
     <!-- 列表 -->
-    <table v-else>
-      <thead>
-        <tr>
-          <th>Class</th>
-          <th>Time</th>
-          <th>Capacity</th>
-          <th>Enrolled</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="c in classes" :key="c.id">
-          <td>{{ c.name }}</td>
-          <td>{{ c.time }}</td>
-          <td>{{ c.capacity }}</td>
-          <td>{{ c.enrolled }}</td>
-          <td>
-            <!-- 已报名：显示 Cancel -->
-            <button
-              v-if="isBooked(c.id)"
-              :disabled="busyCancelId === c.id"
-              @click="cancelClass(c.id)"
-              class="btn-cancel"
-            >
-              {{ busyCancelId === c.id ? "Cancelling..." : "Cancel" }}
-            </button>
+    <div v-else role="region" aria-labelledby="classTableTitle" :aria-busy="loading ? 'true' : 'false'">
+      <h2 id="classTableTitle" class="visually-hidden">Available classes</h2>
 
-            <!-- 未报名：显示 Book（满员时禁用） -->
-            <button
-              v-else
-              :disabled="c.enrolled >= c.capacity || busyId === c.id"
-              @click="bookClass(c.id)"
-            >
-              {{
-                c.enrolled >= c.capacity
-                  ? "Full"
-                  : busyId === c.id
-                  ? "Booking..."
-                  : "Book"
-              }}
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+      <table>
+        <caption class="caption">
+          Class timetable with capacity and your booking status. Use the Action column to book or cancel.
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Class</th>
+            <th scope="col">Time</th>
+            <th scope="col">Capacity</th>
+            <th scope="col">Enrolled</th>
+            <th scope="col">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="c in classes" :key="c.id">
+            <th scope="row">{{ c.name }}</th>
+            <td>{{ c.time }}</td>
+            <td>{{ c.capacity }}</td>
+            <td>{{ c.enrolled }}</td>
+            <td>
+              <!-- 已报名：显示 Cancel -->
+              <button
+                v-if="isBooked(c.id)"
+                :disabled="busyCancelId === c.id"
+                :aria-disabled="busyCancelId === c.id ? 'true' : 'false'"
+                :aria-label="busyCancelId === c.id ? 'Cancelling booking for ' + (c.name || c.id) : 'Cancel booking for ' + (c.name || c.id)"
+                @click="cancelClass(c.id)"
+                class="btn-cancel"
+              >
+                {{ busyCancelId === c.id ? "Cancelling..." : "Cancel" }}
+              </button>
+
+              <!-- 未报名：显示 Book（满员时禁用） -->
+              <button
+                v-else
+                :disabled="c.enrolled >= c.capacity || busyId === c.id"
+                :aria-disabled="(c.enrolled >= c.capacity || busyId === c.id) ? 'true' : 'false'"
+                :title="c.enrolled >= c.capacity ? 'Class is full' : ''"
+                :aria-label="
+                  c.enrolled >= c.capacity
+                    ? 'Class is full'
+                    : (busyId === c.id
+                        ? 'Booking ' + (c.name || c.id)
+                        : 'Book ' + (c.name || c.id))
+                "
+                @click="bookClass(c.id)"
+              >
+                {{
+                  c.enrolled >= c.capacity
+                    ? "Full"
+                    : busyId === c.id
+                    ? "Booking..."
+                    : "Book"
+                }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
 </template>
 
 <script setup>
@@ -273,29 +305,57 @@ async function cancelClass(classId) {
 }
 
 /* ===========================
-   生命周期与登录监听
+   生命周期与登录监听 + 焦点管理
    =========================== */
 onMounted(async () => {
   await loadClasses();
   await loadMyBookings();
 
-  // 登录状态变化时，刷新“我的报名”集合与提示
+  // 登录状态变化时，刷新“我的报名”集合
   onAuthStateChanged(auth, async () => {
     await loadMyBookings();
   });
+
+  // 路由进入后把焦点放到主内容，方便屏幕阅读器用户
+  const main = document.getElementById("main");
+  if (main) main.focus();
 });
 </script>
 
 <style scoped>
+/* Skip link：键盘用户可快速跳到主内容 */
+.skip-link {
+  position: absolute;
+  left: -999px;
+  top: -999px;
+  background: #000;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+.skip-link:focus {
+  left: 12px;
+  top: 12px;
+  z-index: 1000;
+}
+
 .wrap {
   max-width: 900px;
   margin: 40px auto;
+}
+
+.caption {
+  text-align: left;
+  padding: 6px 0 10px;
+  color: #555;
+  font-size: 0.95rem;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 12px;
+  table-layout: fixed;
 }
 
 th,
@@ -303,10 +363,19 @@ td {
   border: 1px solid #ddd;
   padding: 10px;
   text-align: center;
+  word-wrap: break-word;
 }
 
 th {
   background-color: #f6f6f6;
+}
+
+/* 可见焦点：确保键盘导航看得见 */
+button:focus,
+a:focus,
+[tabindex="-1"]:focus {
+  outline: 3px solid #1976d2;
+  outline-offset: 2px;
 }
 
 button {
@@ -314,10 +383,12 @@ button {
   border: none;
   border-radius: 6px;
   background-color: #f0d140;
+  color: #000; /* 浅黄背景搭配深字，提升对比度 */
   cursor: pointer;
 }
 
-button:disabled {
+button:disabled,
+button[aria-disabled="true"] {
   background-color: #ccc;
   cursor: not-allowed;
 }
@@ -333,14 +404,19 @@ button:disabled {
 }
 
 .ok {
-  color: green;
+  color: #2e7d32;
 }
 
-.err {
-  color: red;
-}
-
+.err,
 .text-danger {
   color: #c00;
+}
+
+/* 视觉隐藏但可被辅助技术读取 */
+.visually-hidden {
+  position: absolute !important;
+  height: 1px; width: 1px;
+  overflow: hidden; clip: rect(1px, 1px, 1px, 1px);
+  white-space: nowrap; border: 0; padding: 0; margin: -1px;
 }
 </style>

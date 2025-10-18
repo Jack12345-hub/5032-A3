@@ -455,4 +455,44 @@ exports.sendClassReminder = onRequest({ region: "australia-southeast2" }, async 
   });
 });
 
+// ✅ 公开只读接口：返回 classes 集合数据（安全字段白名单）
+//    支持：CORS、OPTIONS 预检、GET 方法；可选 limit/orderBy；带缓存头
+exports.publicClasses = onRequest(
+  { region: "australia-southeast2" },
+  async (req, res) => {
+    cors(req, res, async () => {
+      if (req.method === "OPTIONS") return res.status(204).send("");
+      if (req.method !== "GET") return res.status(405).send("Method Not Allowed");
+
+      try {
+        // 可选查询参数：?limit=50&orderBy=time
+        const { limit, orderBy } = req.query || {};
+        let q = db.collection("classes");
+        if (orderBy) q = q.orderBy(String(orderBy));
+        if (limit)   q = q.limit(Number(limit));
+
+        const snap = await q.get();
+
+        // 安全字段白名单（不要把敏感字段暴露出去）
+        const SAFE_FIELDS = ["name", "time", "capacity", "enrolled"];
+
+        const data = snap.docs.map(d => {
+          const raw = d.data() || {};
+          const safe = {};
+          SAFE_FIELDS.forEach(k => (safe[k] = raw[k] ?? null));
+          return { id: d.id, ...safe };
+        });
+
+        // 给公开接口加缓存（视情况可调）
+        res.set("Cache-Control", "public, max-age=60, s-maxage=300");
+        return res.status(200).json({ ok: true, count: data.length, data });
+      } catch (e) {
+        console.error("publicClasses error:", e);
+        return res.status(500).json({ ok: false, error: e.message || String(e) });
+      }
+    });
+  }
+);
+
+
 
