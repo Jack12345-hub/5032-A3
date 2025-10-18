@@ -97,7 +97,12 @@
 </li>
 -->
 
-          <li class="nav-item" role="none">
+// NavBar.vue 增加
+<li class="nav-item">
+  <RouterLink to="/book" class="nav-link">Book</RouterLink>
+</li>          
+
+<li class="nav-item" role="none">
             <RouterLink class="nav-link" :to="{ name: 'email-test' }" role="menuitem">
               Email Test
             </RouterLink>

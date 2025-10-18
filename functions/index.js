@@ -200,3 +200,42 @@ exports.capitalizeBook = onDocumentCreated(
     }
   }
 );
+
+exports.bookClass = onRequest(async (req, res) => {
+  cors(req, res, async () => {
+    if (req.method !== "POST") return res.status(405).send("Method Not Allowed");
+    const { userId, classId } = req.body || {};
+    if (!userId || !classId) return res.status(400).json({ error: "Missing userId or classId" });
+
+    try {
+      const out = await db.runTransaction(async (tx) => {
+        const classRef = db.collection("classes").doc(classId);
+        const classSnap = await tx.get(classRef);
+        if (!classSnap.exists) throw new Error("Class not found");
+
+        const cls = classSnap.data();
+        if (cls.enrolled >= cls.capacity) throw new Error("Class is full");
+
+        // 防重复（同一用户同一课只能一条）
+        const dupQ = await tx.get(
+          db.collection("bookings")
+            .where("userId", "==", userId)
+            .where("classId", "==", classId)
+            .limit(1)
+        );
+        if (!dupQ.empty) throw new Error("Already booked");
+
+        const bookingRef = db.collection("bookings").doc();
+        tx.set(bookingRef, {
+          userId, classId, createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        tx.update(classRef, { enrolled: admin.firestore.FieldValue.increment(1) });
+        return { bookingId: bookingRef.id };
+      });
+
+      res.json({ ok: true, ...out });
+    } catch (e) {
+      res.status(400).json({ ok: false, error: e.message });
+    }
+  });
+});

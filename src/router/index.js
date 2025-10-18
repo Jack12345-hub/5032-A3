@@ -16,6 +16,7 @@ import GetAllBookAPI from "../views/GetAllBookAPI.vue";
 import MembersTable from "../views/MembersTable.vue";
 import ClassesTable from "../views/ClassesTable.vue";
 import MapView from "../views/MapView.vue";
+import BookClasses from "../views/BookClasses.vue";
 
 
 // Auth & Firestore
@@ -30,6 +31,7 @@ const routes = [
   { path: "/map", name: "Map", component: MapView },
   { path: "/members", component: MembersTable },
   { path: "/classes", component: ClassesTable },
+  { path: "/book", name: "BookClasses", component: BookClasses },
   
   { path: "/", name: "Home", component: Home },
 
