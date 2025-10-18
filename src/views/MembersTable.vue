@@ -2,7 +2,6 @@
   <div class="table-container">
     <h2>🏋️ Gym Members</h2>
 
-    <!-- 搜索框 -->
     <input
       v-model="searchQuery"
       type="text"
@@ -10,7 +9,12 @@
       class="search-box"
     />
 
-    <!-- 数据表格 -->
+    <!-- ✅ 导出按钮 -->
+    <div class="actions">
+      <button type="button" @click="exportMembersCSV" aria-label="Export members as CSV">Export CSV</button>
+      <button type="button" @click="exportMembersPDF" aria-label="Export members as PDF">Export PDF</button>
+    </div>
+
     <table>
       <thead>
         <tr>
@@ -38,7 +42,6 @@
       </tbody>
     </table>
 
-    <!-- 分页 -->
     <div class="pagination">
       <button :disabled="page === 1" @click="page--">Prev</button>
       <span>Page {{ page }} / {{ totalPages }}</span>
@@ -49,6 +52,10 @@
 
 <script setup>
 import { ref, computed } from "vue";
+/* ⬇️ 如果没有配置 @ 别名，就用 ../utils/export */
+import { downloadCSV } from "../utils/export";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const members = ref([
   { id: 1, name: "Alice Smith", level: "Gold", joined: "2023-04-15" },
@@ -87,7 +94,6 @@ const sortedMembers = computed(() => {
 });
 
 const totalPages = computed(() => Math.ceil(sortedMembers.value.length / itemsPerPage));
-
 const paginatedMembers = computed(() => {
   const start = (page.value - 1) * itemsPerPage;
   return sortedMembers.value.slice(start, start + itemsPerPage);
@@ -100,6 +106,29 @@ function sortBy(key) {
     sortKey.value = key;
     sortOrder.value = "asc";
   }
+}
+
+/* ✅ 导出全部筛选+排序后的结果 */
+function exportMembersCSV() {
+  const rows = sortedMembers.value.map(m => ({
+    Name: m.name,
+    Level: m.level,
+    Joined: m.joined
+  }));
+  downloadCSV("gym-members.csv", rows);
+}
+
+function exportMembersPDF() {
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  doc.setFontSize(14);
+  doc.text("Gym Members", 40, 40);
+  autoTable(doc, {
+    startY: 60,
+    head: [["Name", "Level", "Joined"]],
+    body: sortedMembers.value.map(m => [m.name, m.level, m.joined]),
+    styles: { fontSize: 10 }
+  });
+  doc.save("gym-members.pdf");
 }
 </script>
 
@@ -116,37 +145,14 @@ function sortBy(key) {
   border: 1px solid #ccc;
   border-radius: 8px;
 }
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 16px;
+.actions{
+  display:flex; gap:10px; justify-content:center; margin:8px 0 12px;
 }
-th, td {
-  padding: 10px;
-  border: 1px solid #ddd;
-}
-th {
-  cursor: pointer;
-  background-color: #f6f6f6;
-}
-th:hover {
-  background-color: #f0d140;
-}
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
-}
-button {
-  padding: 6px 12px;
-  border: none;
-  background-color: #f0d140;
-  border-radius: 6px;
-  cursor: pointer;
-}
-button:disabled {
-  background-color: #ddd;
-  cursor: not-allowed;
-}
+table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+th, td { padding: 10px; border: 1px solid #ddd; }
+th { cursor: pointer; background-color: #f6f6f6; }
+th:hover { background-color: #f0d140; }
+.pagination { display:flex; justify-content:center; align-items:center; gap:10px; }
+button { padding: 6px 12px; border: none; background-color: #f0d140; border-radius: 6px; cursor: pointer; }
+button:disabled { background-color: #ddd; cursor: not-allowed; }
 </style>

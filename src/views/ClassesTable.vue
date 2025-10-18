@@ -9,6 +9,12 @@
       class="search-box"
     />
 
+    <!-- ✅ 导出按钮 -->
+    <div class="actions">
+      <button type="button" @click="exportClassesCSV" aria-label="Export classes as CSV">Export CSV</button>
+      <button type="button" @click="exportClassesPDF" aria-label="Export classes as PDF">Export PDF</button>
+    </div>
+
     <table>
       <thead>
         <tr>
@@ -48,6 +54,10 @@
 
 <script setup>
 import { ref, computed } from "vue";
+/* ⬇️ 如果你没有配置 @ 别名，请用相对路径 ../utils/export */
+import { downloadCSV } from "../utils/export";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const classes = ref([
   { id: 1, name: "Yoga Flow", instructor: "Anna", time: "Mon 9:00 AM", spots: 12 },
@@ -100,6 +110,30 @@ function sortBy(key) {
     sortOrder.value = "asc";
   }
 }
+
+/* ✅ 导出：导出的是“筛选+排序后的全部数据（sortedClasses）”，不是仅当前页 */
+function exportClassesCSV() {
+  const rows = sortedClasses.value.map(c => ({
+    Class: c.name,
+    Instructor: c.instructor,
+    Time: c.time,
+    Spots: c.spots
+  }));
+  downloadCSV("gym-classes.csv", rows);
+}
+
+function exportClassesPDF() {
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  doc.setFontSize(14);
+  doc.text("Gym Classes", 40, 40);
+  autoTable(doc, {
+    startY: 60,
+    head: [["Class", "Instructor", "Time", "Spots"]],
+    body: sortedClasses.value.map(c => [c.name, c.instructor, c.time, String(c.spots)]),
+    styles: { fontSize: 10 }
+  });
+  doc.save("gym-classes.pdf");
+}
 </script>
 
 <style scoped>
@@ -115,6 +149,9 @@ function sortBy(key) {
   border: 1px solid #ccc;
   border-radius: 8px;
 }
+.actions{
+  display:flex; gap:10px; justify-content:center; margin:8px 0 12px;
+}
 table {
   width: 100%;
   border-collapse: collapse;
@@ -124,13 +161,8 @@ th, td {
   padding: 10px;
   border: 1px solid #ddd;
 }
-th {
-  cursor: pointer;
-  background-color: #f6f6f6;
-}
-th:hover {
-  background-color: #f0d140;
-}
+th { cursor: pointer; background-color: #f6f6f6; }
+th:hover { background-color: #f0d140; }
 .pagination {
   display: flex;
   justify-content: center;
@@ -144,8 +176,5 @@ button {
   border-radius: 6px;
   cursor: pointer;
 }
-button:disabled {
-  background-color: #ddd;
-  cursor: not-allowed;
-}
+button:disabled { background-color: #ddd; cursor: not-allowed; }
 </style>
