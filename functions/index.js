@@ -201,41 +201,258 @@ exports.capitalizeBook = onDocumentCreated(
   }
 );
 
-exports.bookClass = onRequest(async (req, res) => {
+// 同一用户同一课程只能报名一次（使用确定性文档ID + tx.create）
+// 还包含：OPTIONS 放行、容量健壮性、可选 idToken 校验
+exports.bookClass = onRequest({ region: "australia-southeast2" }, async (req, res) => {
   cors(req, res, async () => {
+    if (req.method === "OPTIONS") return res.status(204).send("");
     if (req.method !== "POST") return res.status(405).send("Method Not Allowed");
-    const { userId, classId } = req.body || {};
-    if (!userId || !classId) return res.status(400).json({ error: "Missing userId or classId" });
 
     try {
-      const out = await db.runTransaction(async (tx) => {
+      let { userId, classId, idToken } = req.body || {};
+
+      // 如果前端传了 idToken，则以后端解出的 uid 为准（更安全）
+      if (idToken) {
+        const decoded = await admin.auth().verifyIdToken(idToken);
+        userId = decoded.uid;
+      }
+
+      if (!userId || !classId) {
+        return res.status(400).json({ ok: false, error: "Missing userId or classId" });
+      }
+
+      // 生成“唯一键”作为文档ID：<classId>_<userId>
+      const bookingId = `${classId}_${userId}`;
+
+      const result = await db.runTransaction(async (tx) => {
+        // 读课程
         const classRef = db.collection("classes").doc(classId);
         const classSnap = await tx.get(classRef);
         if (!classSnap.exists) throw new Error("Class not found");
 
-        const cls = classSnap.data();
-        if (cls.enrolled >= cls.capacity) throw new Error("Class is full");
+        const cls = classSnap.data() || {};
+        const enrolled = Number(cls.enrolled || 0);
+        const capacity = Number(cls.capacity || 0);
+        if (capacity > 0 && enrolled >= capacity) throw new Error("Class is full");
 
-        // 防重复（同一用户同一课只能一条）
-        const dupQ = await tx.get(
-          db.collection("bookings")
-            .where("userId", "==", userId)
-            .where("classId", "==", classId)
-            .limit(1)
-        );
-        if (!dupQ.empty) throw new Error("Already booked");
+        // 【关键】用固定ID + create，若已存在则抛错 -> 达到唯一性
+        const bookingRef = db.collection("bookings").doc(bookingId);
 
-        const bookingRef = db.collection("bookings").doc();
-        tx.set(bookingRef, {
-          userId, classId, createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        // 可选：提前读一下，给出更友好的错误信息
+        const existing = await tx.get(bookingRef);
+        if (existing.exists) throw new Error("Already booked");
+
+        // 查邮箱（users 集合优先，其次 Auth）
+        let userEmail = null;
+        try {
+          const uDoc = await db.collection("users").doc(userId).get();
+          if (uDoc.exists) userEmail = uDoc.data()?.email || null;
+          if (!userEmail) {
+            const authUser = await admin.auth().getUser(userId);
+            userEmail = authUser?.email || null;
+          }
+        } catch (_) {}
+
+        // 只允许“创建”，避免被覆盖
+        tx.create(bookingRef, {
+          userId,
+          userEmail: userEmail || null,
+          classId,
+          className: cls.name || null,
+          classTime: cls.time || null,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
+
+        // 报名数 +1
         tx.update(classRef, { enrolled: admin.firestore.FieldValue.increment(1) });
-        return { bookingId: bookingRef.id };
+
+        return {
+          bookingId,
+          class: { id: classId, name: cls.name || null, time: cls.time || null },
+          user: { id: userId, email: userEmail || null },
+        };
       });
 
-      res.json({ ok: true, ...out });
+      return res.json({ ok: true, ...result });
     } catch (e) {
-      res.status(400).json({ ok: false, error: e.message });
+      // Firestore 已存在时 tx.create 会抛错 -> 转成 Already booked
+      const msg = (e && e.message) || String(e);
+      return res.status(400).json({ ok: false, error: msg.includes("Already booked") ? "Already booked" : msg });
     }
   });
 });
+
+// 取消报名（同一用户对同一课程的 bookingId = <classId>_<userId>）
+// - 支持 OPTIONS、CORS、idToken（优先用后端解出的 uid）
+// - 事务里：确认 booking 存在 -> 删除 booking -> 安全地将 enrolled -1（不小于 0）
+exports.cancelClass = onRequest({ region: "australia-southeast2" }, async (req, res) => {
+  cors(req, res, async () => {
+    if (req.method === "OPTIONS") return res.status(204).send("");
+    if (req.method !== "POST") return res.status(405).send("Method Not Allowed");
+
+    try {
+      let { userId, classId, idToken } = req.body || {};
+
+      // 若前端提供 idToken，则以校验后的 uid 为准
+      if (idToken) {
+        const decoded = await admin.auth().verifyIdToken(idToken);
+        userId = decoded.uid;
+      }
+      if (!userId || !classId) {
+        return res.status(400).json({ ok: false, error: "Missing userId or classId" });
+      }
+
+      const bookingId = `${classId}_${userId}`;
+
+      const result = await db.runTransaction(async (tx) => {
+        const classRef = db.collection("classes").doc(classId);
+        const bookingRef = db.collection("bookings").doc(bookingId);
+
+        // 读报名文档：必须存在才能取消
+        const [classSnap, bookingSnap] = await Promise.all([tx.get(classRef), tx.get(bookingRef)]);
+        if (!classSnap.exists) throw new Error("Class not found");
+        if (!bookingSnap.exists) throw new Error("Not booked");
+
+        // 删除报名
+        tx.delete(bookingRef);
+
+        // 安全递减 enrolled（不小于 0）
+        const cls = classSnap.data() || {};
+        const enrolled = Number(cls.enrolled || 0);
+        const next = Math.max(0, enrolled - 1);
+        tx.update(classRef, { enrolled: next });
+
+        return {
+          bookingId,
+          class: { id: classId, name: cls.name || null, time: cls.time || null },
+          user: { id: userId },
+        };
+      });
+
+      return res.json({ ok: true, ...result });
+    } catch (e) {
+      const msg = (e && e.message) || String(e);
+      // 输出更友好的错误消息
+      let reason = msg;
+      if (msg.includes("Not booked")) reason = "Not booked";
+      if (msg.includes("Class not found")) reason = "Class not found";
+      return res.status(400).json({ ok: false, error: reason });
+    }
+  });
+});
+
+
+// ------------------ ⑤ /sendClassReminder （群发课程提醒）------------------
+exports.sendClassReminder = onRequest({ region: "australia-southeast2" }, async (req, res) => {
+  cors(req, res, async () => {
+    try {
+      if (req.method !== "POST") {
+        return res.status(405).json({ ok: false, error: "Only POST is allowed" });
+      }
+
+      // ✅ 读取 SendGrid 配置
+      const sgKey = SENDGRID_KEY.value();
+      const from = SEND_FROM.value();
+      const adminBcc = ADMIN_INBOX.value() || undefined;
+      if (!sgKey || !from) {
+        return res.status(500).json({ ok: false, error: "SendGrid not configured" });
+      }
+      sgMail.setApiKey(sgKey);
+
+      // ✅ 请求体参数
+      const {
+        classId,
+        subject,   // 可自定义标题
+        text,      // 可自定义文本正文
+        html,      // 可自定义 HTML 正文
+        dryRun,    // true 时只返回收件人清单，不发送
+        max = 200  // 群发上限（默认 200）
+      } = req.body || {};
+
+      if (!classId) return res.status(400).json({ ok: false, error: "classId is required" });
+
+      // ✅ 读取课程信息
+      const classSnap = await db.collection("classes").doc(classId).get();
+      if (!classSnap.exists) return res.status(404).json({ ok: false, error: "Class not found" });
+      const cls = classSnap.data();
+
+      // ✅ 构建基础返回信息（即使无人发送也有）
+      const base = { ok: true, class: { id: classId, name: cls.name, time: cls.time } };
+
+      // ✅ 查找报名记录
+      const bookSnap = await db.collection("bookings").where("classId", "==", classId).get();
+      const uids = Array.from(new Set(bookSnap.docs.map(d => d.data().userId).filter(Boolean)));
+
+      if (uids.length === 0) {
+        return res.status(200).json({ ...base, sent: 0, recipients: [] });
+      }
+
+      // ✅ 获取所有用户邮箱（从 users 集合或 Auth）
+      const emails = [];
+      for (const uid of uids) {
+        try {
+          const uDoc = await db.collection("users").doc(uid).get();
+          const emailFromUsers = uDoc.exists && uDoc.data()?.email;
+          if (emailFromUsers) {
+            emails.push(String(emailFromUsers));
+            continue;
+          }
+          const authUser = await admin.auth().getUser(uid);
+          if (authUser?.email) emails.push(String(authUser.email));
+        } catch (_) {
+          // 单个用户错误不影响整体
+        }
+      }
+
+      // ✅ 去重 + 限制数量
+      const unique = Array.from(new Set(emails)).slice(0, Math.max(0, Math.min(Number(max) || 0, 2000)) || 200);
+
+      if (unique.length === 0) {
+        return res.status(200).json({ ...base, sent: 0, recipients: [] });
+      }
+
+      // ✅ dryRun 模式
+      if (dryRun) {
+        return res.status(200).json({ ...base, dryRun: true, count: unique.length, recipients: unique });
+      }
+
+      // ✅ 默认邮件模板（若前端未传自定义内容）
+      const defaultSubject = `Reminder: ${cls.name} at ${cls.time}`;
+      const defaultText =
+        `This is a reminder for your class booking:\n\n` +
+        `Class: ${cls.name}\n` +
+        `Time: ${cls.time}\n\n` +
+        `See you soon!`;
+      const defaultHtml =
+        `<p>This is a reminder for your class booking:</p>` +
+        `<p><b>Class:</b> ${cls.name}<br/><b>Time:</b> ${cls.time}</p>` +
+        `<p>See you soon!</p>`;
+
+      // ✅ 发送群发邮件
+      const msg = {
+        to: unique,
+        from,
+        subject: subject || defaultSubject,
+        text: text || defaultText,
+        html: html || defaultHtml,
+        bcc: adminBcc,
+      };
+
+      await sgMail.sendMultiple(msg);
+
+      return res.status(200).json({
+        ...base,
+        ok: true,
+        sent: unique.length,
+        recipients: unique,
+        bcc: adminBcc || null,
+      });
+    } catch (err) {
+      console.error("sendClassReminder failed:", err);
+      const detail = err?.response?.body || err.message || String(err);
+      return res.status(500).json({ ok: false, error: "sendClassReminder failed", detail });
+    }
+  });
+});
+
+
