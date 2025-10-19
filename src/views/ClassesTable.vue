@@ -2,7 +2,7 @@
   <div class="table-container">
     <h2>🧘 Gym Classes</h2>
 
-    <!-- 全局搜索 -->
+    <!-- Global search -->
     <input
       v-model="searchQuery"
       type="text"
@@ -11,7 +11,7 @@
       aria-label="Search all columns"
     />
 
-    <!-- 导出 -->
+    <!-- Export -->
     <div class="actions">
       <button type="button" @click="exportClassesCSV" aria-label="Export classes as CSV">Export CSV</button>
       <button type="button" @click="exportClassesPDF" aria-label="Export classes as PDF">Export PDF</button>
@@ -45,7 +45,7 @@
           <th scope="col">Spots</th>
         </tr>
 
-        <!-- 按列搜索 -->
+        <!-- Per-column filters -->
         <tr class="filters">
           <th><input v-model="fClass" placeholder="Filter class…" aria-label="Filter by class" /></th>
           <th><input v-model="fInstructor" placeholder="Filter instructor…" aria-label="Filter by instructor" /></th>
@@ -89,12 +89,12 @@ const classes = ref([
   { id: 8,  name: "Power Pump",      instructor: "Henry",  time: "Fri 6:00 PM",  spots: 15 },
   { id: 9,  name: "Core Balance",    instructor: "Ivy",    time: "Sat 10:00 AM", spots: 13 },
   { id: 10, name: "Cardio Burn",     instructor: "Jack",   time: "Sun 9:00 AM",  spots: 16 },
-  // 再加一些演示数据，便于分页
+  // Add more demo rows to showcase pagination
   { id: 11, name: "Mobility Flow",   instructor: "Kate",   time: "Sun 4:00 PM",  spots: 12 },
   { id: 12, name: "Strength 101",    instructor: "Leo",    time: "Wed 7:00 PM",  spots: 18 },
 ]);
 
-// 搜索与排序
+// Search & sort
 const searchQuery   = ref("");
 const fClass        = ref("");
 const fInstructor   = ref("");
@@ -102,11 +102,11 @@ const fTime         = ref("");
 const sortKey       = ref("name");
 const sortOrder     = ref("asc");
 
-// 分页（每页 10 行）
+// Pagination (10 rows per page)
 const page          = ref(1);
 const itemsPerPage  = 10;
 
-// 条件变化时回到第 1 页
+// Reset to page 1 when filters change
 watch([searchQuery, fClass, fInstructor, fTime], () => { page.value = 1; });
 
 const filteredClasses = computed(() => {
@@ -125,7 +125,7 @@ const sortedClasses = computed(() => {
   const order = sortOrder.value;
   return [...filteredClasses.value].sort((a, b) => {
     const A = a[key], B = b[key];
-    // 字符串忽略大小写，数字正常比较
+    // Case-insensitive compare for strings; numeric compare for numbers
     const aVal = typeof A === "string" ? A.toLowerCase() : A;
     const bVal = typeof B === "string" ? B.toLowerCase() : B;
     if (aVal < bVal) return order === "asc" ? -1 : 1;
@@ -140,7 +140,7 @@ const paginatedClasses = computed(() => {
   return sortedClasses.value.slice(start, start + itemsPerPage);
 });
 
-// 保护：如果筛选导致页码越界，自动回到最后一页
+// Guard: if filtering causes page to exceed bounds, snap to the last page
 watch(totalPages, (tp) => { if (page.value > tp) page.value = tp; });
 
 function sortBy(key) {
@@ -157,7 +157,7 @@ function ariaSort(key) {
   return sortOrder.value === "asc" ? "ascending" : "descending";
 }
 
-/* 导出：筛选+排序后的全部数据 */
+/* Export: all data after current filtering + sorting */
 function exportClassesCSV() {
   const rows = sortedClasses.value.map(c => ({
     Class: c.name,

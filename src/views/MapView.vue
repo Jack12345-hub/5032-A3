@@ -4,7 +4,7 @@
       <h2>💪 Find Nearby Gyms</h2>
 
       <div class="controls">
-        <!-- 新增：地区搜索框（Places Autocomplete） -->
+        <!-- Added: Search box (Places Autocomplete) -->
         <input
           ref="searchInput"
           type="text"
@@ -48,30 +48,30 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch } from "vue";
-// 可选：安装并启用标记聚合（大量点位更清晰）
+// Optional: enable MarkerClusterer for clearer display of many points
 // npm i @googlemaps/markerclusterer
 // import { MarkerClusterer } from "@googlemaps/markerclusterer";
 
 const error = ref("");
-const radiusKm = ref(3);        // 搜索半径（km）
-const openNowOnly = ref(false); // 仅营业中
+const radiusKm = ref(3);        // Search radius (km)
+const openNowOnly = ref(false); // Show only open gyms
 const markerCount = ref(0);
-const searchInput = ref(null);  // **新增**：搜索框引用
+const searchInput = ref(null);  // Added: reference to search input
 
 let map = null;
 let infoWindow = null;
 let idleListener = null;
 let geolocateMarker = null;
-let searchMarker = null;        // **新增**：搜索结果中心标记
-let radiusCircle = null;        // **新增**：半径圆圈
+let searchMarker = null;        // Added: marker for search center
+let radiusCircle = null;        // Added: circle showing search radius
 const gymMarkers = [];
-let clusterer = null; // 若启用 MarkerClusterer，用它来托管 markers
+let clusterer = null; // If MarkerClusterer is used, this manages markers
 let refreshTimer = null;
-let autocomplete = null;        // **新增**：Places Autocomplete 实例
+let autocomplete = null;        // Added: Places Autocomplete instance
 
 const MELBOURNE_CBD = { lat: -37.8136, lng: 144.9631 };
 
-/** 工具：清空当前的健身房标记 */
+/** Utility: Clear all current gym markers */
 function clearGymMarkers() {
   if (clusterer) {
     clusterer.clearMarkers();
@@ -81,7 +81,7 @@ function clearGymMarkers() {
   markerCount.value = 0;
 }
 
-/** 工具：给单个 place 打点并绑定 InfoWindow */
+/** Utility: Add a single place marker and attach InfoWindow */
 function addGymMarker(place) {
   if (!place?.geometry?.location) return;
 
@@ -111,7 +111,7 @@ function addGymMarker(place) {
   markerCount.value = gymMarkers.length;
 }
 
-/** 关键：基于中心点进行 Places 附近搜索（处理分页，最多 ~60 条） */
+/** Core: Perform Places Nearby Search around center (handle pagination, max ~60 results) */
 function findGymsNear(center) {
   if (!map) return;
   const service = new google.maps.places.PlacesService(map);
@@ -127,7 +127,7 @@ function findGymsNear(center) {
   function handlePage(results, status, pagination) {
     if (status !== google.maps.places.PlacesServiceStatus.OK || !results) {
       if (totalFetched === 0) {
-        error.value = "无法从 Places API 获取结果：请检查是否启用 Places API 与计费，或是否超出配额。";
+        error.value = "Failed to fetch results from Places API: ensure Places API and billing are enabled, or check your quota.";
       }
       if (clusterer) clusterer.addMarkers(gymMarkers);
       return;
@@ -149,7 +149,7 @@ function findGymsNear(center) {
   service.nearbySearch(request, handlePage);
 }
 
-/** 画/更新半径圈 */
+/** Draw or update radius circle */
 function drawRadiusCircle(center) {
   const meters = Math.round(radiusKm.value * 1000);
   if (!radiusCircle) {
@@ -171,11 +171,11 @@ function drawRadiusCircle(center) {
   }
 }
 
-/** 根据给定中心初始化搜索：标记用户/搜索点、触发搜索并绑定 idle 监听做自动刷新 */
+/** Initialize search from center: mark user/search point, trigger search, and set idle listener for auto refresh */
 function initSearch(center, opts = { markUser: false, markSearch: false }) {
   if (!map) return;
 
-  // 用户定位标记
+  // User location marker
   if (opts.markUser) {
     if (geolocateMarker) geolocateMarker.setMap(null);
     geolocateMarker = new google.maps.Marker({
@@ -186,7 +186,7 @@ function initSearch(center, opts = { markUser: false, markSearch: false }) {
     });
   }
 
-  // 搜索中心标记（来自搜索框）
+  // Search center marker (from autocomplete)
   if (opts.markSearch) {
     if (searchMarker) searchMarker.setMap(null);
     searchMarker = new google.maps.Marker({
@@ -206,7 +206,7 @@ function initSearch(center, opts = { markUser: false, markSearch: false }) {
     google.maps.event.removeListener(idleListener);
   }
   idleListener = map.addListener("idle", () => {
-    // 拖拽/缩放后更新半径圈但不要频繁触发检索
+    // Update radius circle after drag/zoom, avoid too frequent searches
     drawRadiusCircle(map.getCenter());
     clearTimeout(refreshTimer);
     refreshTimer = setTimeout(() => {
@@ -216,20 +216,20 @@ function initSearch(center, opts = { markUser: false, markSearch: false }) {
   });
 }
 
-/** 手动刷新按钮：根据当前中心重搜 */
+/** Manual refresh button: re-search from current map center */
 function manualRefresh() {
   if (!map) return;
   clearGymMarkers();
   findGymsNear(map.getCenter());
 }
 
-/** 新增：使用当前地图中心作为搜索区域 */
+/** Added: Use current map center as new search area */
 function useMapCenter() {
   if (!map) return;
   initSearch(map.getCenter(), { markUser: false, markSearch: true });
 }
 
-/** 监听半径、OpenNow 改变后，更新圈并刷新 */
+/** When radius or openNowOnly changes, update circle and refresh results */
 watch(radiusKm, () => {
   if (!map) return;
   drawRadiusCircle(map.getCenter());
@@ -239,7 +239,7 @@ watch(openNowOnly, () => manualRefresh());
 
 onMounted(() => {
   if (!window.google || !window.google.maps) {
-    error.value = "Google Maps failed to load. Check your API key and libraries=places.";
+    error.value = "Google Maps failed to load. Check your API key and ensure libraries=places is included.";
     return;
   }
 
@@ -253,14 +253,14 @@ onMounted(() => {
 
   infoWindow = new google.maps.InfoWindow();
 
-  // 若启用聚合，请取消注释并确保已安装依赖
+  // If using MarkerClusterer, uncomment and ensure dependency is installed
   // clusterer = new MarkerClusterer({ map, markers: [] });
 
-  // **初始化 Autocomplete**
+  // Initialize Places Autocomplete
   if (searchInput.value) {
     autocomplete = new google.maps.places.Autocomplete(searchInput.value, {
       fields: ["geometry", "name", "formatted_address"],
-      // types: ["geocode"], // 如需只允许地址可打开
+      // types: ["geocode"], // uncomment to restrict to addresses only
     });
     autocomplete.bindTo("bounds", map);
 
@@ -272,10 +272,10 @@ onMounted(() => {
       }
       error.value = "";
 
-      // 使用 viewport 优先适配区域，否则设定中心与合适缩放
+      // Use viewport when available, else center + appropriate zoom
       if (place.geometry.viewport) {
         map.fitBounds(place.geometry.viewport);
-        // 适度放大，避免太远
+        // Slightly zoom in to avoid too wide a view
         const listener = map.addListener("idle", () => {
           if (map.getZoom() > 16) map.setZoom(16);
           google.maps.event.removeListener(listener);
@@ -289,7 +289,7 @@ onMounted(() => {
     });
   }
 
-  // 优先尝试定位用户
+  // Attempt to locate user first
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -297,18 +297,18 @@ onMounted(() => {
         initSearch(userCenter, { markUser: true });
       },
       () => {
-        error.value = "无法访问你的定位，将显示墨尔本市中心附近的健身房。";
+        error.value = "Unable to access your location. Showing gyms near Melbourne CBD instead.";
         initSearch(MELBOURNE_CBD, { markUser: false });
       },
       { enableHighAccuracy: true, timeout: 8000 }
     );
   } else {
-    error.value = "浏览器不支持定位，将显示墨尔本市中心附近的健身房。";
+    error.value = "Geolocation not supported. Showing gyms near Melbourne CBD instead.";
     initSearch(MELBOURNE_CBD, { markUser: false });
   }
 });
 
-// 卸载时清理资源
+// Cleanup resources on unmount
 onBeforeUnmount(() => {
   if (idleListener) {
     google.maps.event.removeListener(idleListener);
@@ -346,7 +346,7 @@ onBeforeUnmount(() => {
   font-size: 14px;
 }
 
-/* 新增：搜索框样式 */
+/* Added: search box styling */
 .controls .search {
   width: 280px;
   max-width: 50vw;
@@ -408,7 +408,7 @@ onBeforeUnmount(() => {
 .legend .dot.gym  { background: #4caf50; }
 .legend .sep { opacity: .5; }
 
-/* 小圆环指示，仅装饰 */
+/* Decorative circle indicator */
 .legend .ring {
   display: inline-block;
   width: 12px;

@@ -2,7 +2,7 @@
   <div class="table-container">
     <h2>🏋️ Gym Members</h2>
 
-    <!-- 全局搜索 -->
+    <!-- Global search -->
     <input
       v-model="searchQuery"
       type="text"
@@ -11,7 +11,7 @@
       aria-label="Search all columns"
     />
 
-    <!-- 导出 -->
+    <!-- Export -->
     <div class="actions">
       <button type="button" @click="exportMembersCSV" aria-label="Export members as CSV">Export CSV</button>
       <button type="button" @click="exportMembersPDF" aria-label="Export members as PDF">Export PDF</button>
@@ -44,7 +44,7 @@
           </th>
         </tr>
 
-        <!-- 按列搜索 -->
+        <!-- Per-column filters -->
         <tr class="filters">
           <th><input v-model="fName"   placeholder="Filter name…"   aria-label="Filter by name" /></th>
           <th><input v-model="fLevel"  placeholder="Filter level…"  aria-label="Filter by level" /></th>
@@ -87,12 +87,12 @@ const members = ref([
   { id: 9,  name: "Ivy Brown",    level: "Bronze", joined: "2024-02-17" },
   { id: 10, name: "Jake Wilson",  level: "Gold",   joined: "2022-09-08" },
   { id: 11, name: "Kelly Tan",    level: "Silver", joined: "2024-03-14" },
-  // 多几条方便演示分页
+  // More rows for pagination demo
   { id: 12, name: "Leo Sun",      level: "Gold",   joined: "2024-05-02" },
   { id: 13, name: "Mina Park",    level: "Bronze", joined: "2023-03-22" },
 ]);
 
-// 搜索与排序
+// Search & sorting
 const searchQuery = ref("");
 const fName  = ref("");
 const fLevel = ref("");
@@ -100,11 +100,11 @@ const fJoined= ref("");
 const sortKey   = ref("name");
 const sortOrder = ref("asc");
 
-// 分页（每页 10 行）
+// Pagination (10 rows per page)
 const page         = ref(1);
 const itemsPerPage = 10;
 
-// 条件变化时回到第 1 页
+// When filters change, jump back to page 1
 watch([searchQuery, fName, fLevel, fJoined], () => { page.value = 1; });
 
 const filteredMembers = computed(() => {
@@ -153,7 +153,7 @@ function ariaSort(key) {
   return sortOrder.value === "asc" ? "ascending" : "descending";
 }
 
-/* 导出：筛选+排序后的全部数据 */
+/* Export: all data after current filtering + sorting */
 function exportMembersCSV() {
   const rows = sortedMembers.value.map(m => ({
     Name: m.name,

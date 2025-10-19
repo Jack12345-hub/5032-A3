@@ -2,7 +2,7 @@
   <div class="wrap">
     <h2>🌐 Public Classes (Read-only)</h2>
 
-    <!-- 控件区 -->
+    <!-- Controls -->
     <div class="toolbar">
       <label>
         Order by:
@@ -31,18 +31,18 @@
       <span class="tip">This endpoint is public read-only JSON.</span>
     </div>
 
-    <!-- 提示区 -->
+    <!-- Status messages -->
     <p v-if="error" class="err">❌ {{ error }}</p>
     <p v-if="!loading && !error" class="ok">
       ✅ Loaded {{ data.length }} item(s)
     </p>
 
-    <!-- 空状态 -->
+    <!-- Empty state -->
     <div v-if="!loading && !error && data.length === 0" class="empty">
       No classes found.
     </div>
 
-    <!-- 表格展示 -->
+    <!-- Table display -->
     <table v-else-if="!loading && !error">
       <thead>
         <tr>
@@ -64,7 +64,7 @@
       </tbody>
     </table>
 
-    <!-- 原始 JSON（可折叠） -->
+    <!-- Raw JSON view (collapsible) -->
     <details class="json">
       <summary>Raw JSON</summary>
       <pre>{{ rawJson }}</pre>
@@ -75,15 +75,15 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 
-// ✅ 替换为你部署后的公开端点
+// ✅ Replace with your deployed public endpoint
 const BASE =
   "https://australia-southeast2-week7-siyi.cloudfunctions.net/publicClasses";
 
 const data = ref([]);
 const loading = ref(false);
 const error = ref("");
-const orderBy = ref("time"); // 默认按 time
-const limit = ref(20);       // 默认 20
+const orderBy = ref("time"); // Default: order by time
+const limit = ref(20);       // Default: limit 20
 
 const rawJson = computed(() =>
   JSON.stringify(
@@ -93,6 +93,7 @@ const rawJson = computed(() =>
   )
 );
 
+/** Fetch data from public endpoint */
 async function fetchData() {
   loading.value = true;
   error.value = "";

@@ -1,15 +1,15 @@
 <template>
-  <!-- Skip link：键盘用户快速跳到主内容 -->
+  <!-- Skip link: allows keyboard users to jump directly to main content -->
   <a href="#main" class="skip-link">Skip to main content</a>
 
   <main id="main" class="wrap" tabindex="-1" aria-label="Book a class page">
     <h1>📅 Book a Class</h1>
 
-    <!-- 状态提示（读屏可读） -->
+    <!-- Status messages (screen reader friendly) -->
     <p v-if="loading" role="status" aria-live="polite">Loading...</p>
     <p v-if="err" class="text-danger" role="alert">{{ err }}</p>
 
-    <!-- 动态消息：聚焦到这里让读屏立即播报 -->
+    <!-- Dynamic message: focus here to trigger immediate screen reader announcement -->
     <p
       v-if="msg"
       :class="{ ok: ok, err: !ok }"
@@ -21,7 +21,7 @@
       {{ msg }}
     </p>
 
-    <!-- 无课程：一键灌入示例数据 -->
+    <!-- When no classes exist: insert demo data -->
     <div
       v-if="!loading && classes.length === 0"
       class="empty"
@@ -34,7 +34,7 @@
       </button>
     </div>
 
-    <!-- 课程表 -->
+    <!-- Class table -->
     <div
       v-else
       role="region"
@@ -70,7 +70,7 @@
             <td>{{ c.capacity }}</td>
             <td>{{ c.enrolled }}</td>
             <td>
-              <!-- 已报名：显示 Cancel -->
+              <!-- If booked: show Cancel -->
               <button
                 v-if="isBooked(c.id)"
                 class="btn-cancel"
@@ -85,7 +85,7 @@
                 {{ busyCancelId === c.id ? "Cancelling..." : "Cancel" }}
               </button>
 
-              <!-- 未报名：显示 Book（满员时禁用） -->
+              <!-- If not booked: show Book (disabled if class is full) -->
               <button
                 v-else
                 type="button"
@@ -137,7 +137,7 @@ import { auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 
 /* ===========================
-   云函数地址（按需替换）
+   Cloud Function URLs (replace as needed)
    =========================== */
 const BOOK_URL =
   "https://australia-southeast2-week7-siyi.cloudfunctions.net/bookClass";
@@ -145,7 +145,7 @@ const CANCEL_URL =
   "https://australia-southeast2-week7-siyi.cloudfunctions.net/cancelClass";
 
 /* ===========================
-   响应式状态
+   Reactive states
    =========================== */
 const db = getFirestore();
 const classes = ref([]);
@@ -154,18 +154,18 @@ const err = ref("");
 const msg = ref("");
 const ok = ref(false);
 
-// 报名与取消时的忙碌标记
+// Flags for booking/cancellation loading states
 const busyId = ref("");
 const busyCancelId = ref("");
 
-// 当前用户已报名的 classId 集合
+// Set of classIds currently booked by this user
 const myBookings = ref(new Set());
 
-// 状态段落引用，用于焦点管理
+// Reference for status paragraph (for focus management)
 const statusEl = ref(null);
 
 /* ===========================
-   加载课程
+   Load all classes
    =========================== */
 async function loadClasses() {
   loading.value = true;
@@ -182,7 +182,7 @@ async function loadClasses() {
 }
 
 /* ===========================
-   加载“我的报名”
+   Load user’s current bookings
    =========================== */
 async function loadMyBookings() {
   myBookings.value = new Set();
@@ -197,12 +197,12 @@ async function loadMyBookings() {
     });
   } catch (e) {
     console.error("loadMyBookings error:", e);
-    // 静默失败不影响主流程
+    // Fail silently; doesn't affect main flow
   }
 }
 
 /* ===========================
-   一键灌入示例课程
+   Insert demo classes
    =========================== */
 async function seedClasses() {
   const demo = [
@@ -227,14 +227,14 @@ async function seedClasses() {
 }
 
 /* ===========================
-   是否已报名
+   Check if a class is booked
    =========================== */
 function isBooked(classId) {
   return myBookings.value.has(classId);
 }
 
 /* ===========================
-   报名（调用云函数 bookClass）
+   Book a class (calls Cloud Function bookClass)
    =========================== */
 async function bookClass(classId) {
   const user = auth.currentUser;
@@ -275,8 +275,8 @@ async function bookClass(classId) {
 
     ok.value = true;
     msg.value = `🎉 Successfully booked “${data.class?.name ?? classId}”!`;
-    await loadClasses();     // 刷新人数
-    await loadMyBookings();  // 刷新按钮状态
+    await loadClasses();     // Refresh class counts
+    await loadMyBookings();  // Refresh button states
   } catch (e) {
     ok.value = false;
     msg.value = "⚠️ Booking failed: " + (e.message || String(e));
@@ -286,7 +286,7 @@ async function bookClass(classId) {
 }
 
 /* ===========================
-   取消报名（调用云函数 cancelClass）
+   Cancel booking (calls Cloud Function cancelClass)
    =========================== */
 async function cancelClass(classId) {
   const user = auth.currentUser;
@@ -325,8 +325,8 @@ async function cancelClass(classId) {
 
     ok.value = true;
     msg.value = `✅ Canceled booking for “${data.class?.name ?? classId}”.`;
-    await loadClasses();     // 更新人数
-    await loadMyBookings();  // 更新按钮状态
+    await loadClasses();     // Refresh enrollment count
+    await loadMyBookings();  // Update button state
   } catch (e) {
     ok.value = false;
     msg.value = "⚠️ Cancel failed: " + (e.message || String(e));
@@ -336,7 +336,7 @@ async function cancelClass(classId) {
 }
 
 /* ===========================
-   生命周期与登录监听 + 焦点管理
+   Lifecycle hooks and login listener + focus management
    =========================== */
 onMounted(async () => {
   await loadClasses();
@@ -346,12 +346,12 @@ onMounted(async () => {
     await loadMyBookings();
   });
 
-  // 进入路由后把焦点放到主内容，方便键盘/读屏用户
+  // After route enters, focus the main content for keyboard/screen reader users
   const main = document.getElementById("main");
   if (main) main.focus();
 });
 
-// 当有新的 msg 时，将焦点移动到状态段落，便于读屏器播报
+// When a new message appears, move focus to the status paragraph for screen reader announcement
 watch(msg, async (val) => {
   if (!val) return;
   await nextTick();
@@ -360,7 +360,7 @@ watch(msg, async (val) => {
 </script>
 
 <style scoped>
-/* Skip link：键盘用户可快速跳到主内容 */
+/* Skip link: keyboard users can jump directly to main content */
 .skip-link {
   position: absolute;
   left: -999px;
@@ -407,7 +407,7 @@ th {
   background-color: #f6f6f6;
 }
 
-/* 可见焦点：确保键盘导航看得见 */
+/* Visible focus: ensure keyboard navigation is noticeable */
 button:focus,
 a:focus,
 [tabindex="-1"]:focus {
@@ -424,8 +424,8 @@ button {
   padding: 6px 12px;
   border: none;
   border-radius: 6px;
-  background-color: #f0d140; /* 浅黄主题 */
-  color: #000;               /* 提升对比度 */
+  background-color: #f0d140; /* Light yellow theme */
+  color: #000;               /* Improved contrast */
   cursor: pointer;
 }
 
@@ -459,7 +459,7 @@ button[aria-disabled="true"] {
   color: #c00;
 }
 
-/* 视觉隐藏但可被辅助技术读取 */
+/* Visually hidden but readable by assistive technologies */
 .visually-hidden {
   position: absolute !important;
   height: 1px; width: 1px;

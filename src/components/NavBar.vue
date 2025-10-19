@@ -1,12 +1,12 @@
 <template>
-  <!-- Skip link：键盘用户可快速跳到主内容 -->
+  <!-- Skip link: allow keyboard users to jump to main content -->
   <a class="skip-link" href="#main-content">Skip to main content</a>
 
   <nav class="navbar navbar-dark bg-dark navbar-expand" role="navigation" aria-label="Main navigation">
     <div class="container">
       <RouterLink to="/" class="navbar-brand" aria-label="Go to Home">My Gym App</RouterLink>
 
-      <!-- 折叠按钮：同步 aria-expanded -->
+      <!-- Toggler: keep aria-expanded in sync -->
       <button
         class="navbar-toggler"
         type="button"
@@ -70,7 +70,7 @@
             <RouterLink :to="{ name: 'email-test' }" class="nav-link" @click="collapseIfMobile">Email Test</RouterLink>
           </li>
 
-          <!-- 登录/注册 -->
+          <!-- Login / Register -->
           <li class="nav-item" v-if="!session.isAuthed">
             <RouterLink to="/firelogin" class="nav-link" @click="collapseIfMobile">Login</RouterLink>
           </li>
@@ -83,7 +83,7 @@
             <RouterLink to="/admin" class="nav-link" @click="collapseIfMobile">Admin</RouterLink>
           </li>
 
-          <!-- 已登录状态 -->
+          <!-- Logged-in state -->
           <li class="nav-item d-flex align-items-center" v-if="session.isAuthed">
             <span class="navbar-text small me-2" role="status" aria-live="polite">
               {{ session.profile?.email || session.user?.email }}
@@ -113,7 +113,7 @@ function toggleExpanded() {
   isExpanded.value = !isExpanded.value;
 }
 
-// 在移动端点击导航项后自动收起折叠导航
+// On mobile, collapse the navbar after clicking a nav item
 function collapseIfMobile() {
   if (!navCollapse.value) return;
   const hasShow = navCollapse.value.classList.contains("show");
@@ -139,16 +139,16 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* 可见的键盘焦点（WCAG 2.4.7） */
+/* Visible keyboard focus (WCAG 2.4.7) */
 .nav-link:focus,
 .navbar-brand:focus,
 .btn:focus,
 .navbar-toggler:focus {
-  outline: 3px solid #ffc107; /* 高对比黄色 */
+  outline: 3px solid #ffc107; /* high-contrast yellow */
   outline-offset: 2px;
 }
 
-/* 跳过链接（WCAG 2.4.1） */
+/* Skip link (WCAG 2.4.1) */
 .skip-link {
   position: absolute;
   left: -9999px;
@@ -164,7 +164,7 @@ onMounted(() => {
   text-decoration: none;
 }
 
-/* 当前链接可用 aria-current="page" 自动标注；可自定义样式 */
+/* Current link can be auto-marked via aria-current="page"; customize style below */
 .nav-link[aria-current="page"] {
   text-decoration: underline;
 }

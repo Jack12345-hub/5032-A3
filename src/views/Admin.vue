@@ -3,19 +3,19 @@
     <h1 class="mb-3">Admin: Class Reminder</h1>
     <p class="text-muted">Send reminder emails to all users who booked a selected class.</p>
 
-    <!-- 状态提示 -->
+    <!-- Status messages -->
     <div v-if="loading" class="alert alert-secondary py-2">Loading classes…</div>
     <div v-if="err" class="alert alert-danger py-2" role="alert">{{ err }}</div>
     <div v-if="msg" class="alert" :class="ok ? 'alert-success' : 'alert-warning'" role="status">
       {{ msg }}
     </div>
 
-    <!-- 无课程时显示提示 -->
+    <!-- Message shown when no classes exist -->
     <div v-if="!loading && classes.length === 0" class="alert alert-info">
       No classes found. Go to <RouterLink to="/book">Book</RouterLink> page to seed demo classes first.
     </div>
 
-    <!-- 表单 -->
+    <!-- Form -->
     <form v-if="classes.length" @submit.prevent>
       <div class="mb-3">
         <label class="form-label" for="cls">Class</label>
@@ -54,7 +54,7 @@
         <textarea id="html" class="form-control" rows="4" v-model="form.html"
                   placeholder="<p>Optional <b>HTML</b> body.</p>"></textarea>
         <div class="form-text">
-          If subject/text/html are empty, server will use a sensible default based on the class.
+          If subject/text/html are empty, the server will generate a default message based on the class.
         </div>
       </div>
 
@@ -68,7 +68,7 @@
       </div>
     </form>
 
-    <!-- Dry run 结果 -->
+    <!-- Dry run results -->
     <div v-if="previewList.length" class="card mt-4">
       <div class="card-header">Preview recipients (dry run) — {{ previewList.length }}</div>
       <div class="card-body small">
@@ -82,7 +82,7 @@
 import { ref, onMounted } from "vue";
 import { getFirestore, collection, getDocs } from "firebase/firestore";
 
-// ⛳ 把这里替换成你部署的云函数 URL
+// ⛳ Replace with your deployed Cloud Function URL
 const REMINDER_URL =
   "https://australia-southeast2-week7-siyi.cloudfunctions.net/sendClassReminder";
 
@@ -132,7 +132,7 @@ function payload(dryRun) {
   return p;
 }
 
-// 在 <script setup> 里加入一个工具函数
+// Utility function to get the selected class
 function getPicked() {
   return classes.value.find(c => c.id === form.value.classId) || null;
 }
@@ -152,7 +152,7 @@ async function preview() {
 
     previewList.value = data.recipients || [];
 
-    // ✅ 兜底：后端无 class 时，用本地 picked
+    // ✅ Fallback: if backend doesn't return class info, use the local selection
     const picked = getPicked();
     const clsName = data.class?.name ?? picked?.name ?? "(unknown)";
     const clsTime = data.class?.time ?? picked?.time ?? "(unknown)";
@@ -178,7 +178,7 @@ async function sendNow() {
     const data = await r.json();
     if (!r.ok || data.ok === false) throw new Error(data.error || "Send failed");
 
-    // ✅ 兜底：后端无 class 时，用本地 picked
+    // ✅ Fallback: if backend doesn't return class info, use the local selection
     const picked = getPicked();
     const clsName = data.class?.name ?? picked?.name ?? "(unknown)";
     const clsTime = data.class?.time ?? picked?.time ?? "(unknown)";

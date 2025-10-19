@@ -14,7 +14,7 @@ import { Bar, Line } from "vue-chartjs";
 import { Chart, BarElement, LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend } from "chart.js";
 Chart.register(BarElement, LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend);
 
-// demo：可改为从 Firestore 聚合后的数据
+// demo: can be replaced with aggregated data from Firestore
 const levelData = ref({
   labels: ["Gold","Silver","Bronze"],
   datasets:[{ label:"Members", data:[12,18,9] }]

@@ -3,11 +3,11 @@
 function csvEscape(val) {
   if (val === null || val === undefined) return '';
   const s = String(val);
-  // 若包含逗号/引号/换行，则用双引号包裹并转义内部引号
+  // If the value contains commas, quotes, or newlines, wrap it in double quotes and escape internal quotes
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-// ✅ 具名导出
+// ✅ Named export
 export function downloadCSV(filename, rows) {
   if (!rows || rows.length === 0) {
     console.warn('No data to export');
@@ -15,7 +15,7 @@ export function downloadCSV(filename, rows) {
   }
   const headers = Object.keys(rows[0]);
   const lines = [
-    headers.join(','), // 表头
+    headers.join(','), // Header row
     ...rows.map(r => headers.map(h => csvEscape(r[h])).join(',')),
   ];
   const blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });

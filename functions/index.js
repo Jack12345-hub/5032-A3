@@ -1,6 +1,6 @@
 // CommonJS (require/exports)
 
-// ---- imports (只声明一次) ----
+// ---- imports (declare only once) ----
 const { onRequest } = require("firebase-functions/v2/https");
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const functionsConfig = require("firebase-functions/params");
@@ -8,13 +8,13 @@ const admin = require("firebase-admin");
 const cors = require("cors")({ origin: true });
 const sgMail = require("@sendgrid/mail");
 
-// ---- Firebase Admin 初始化（只初始化一次）----
+// ---- Firebase Admin initialization (only once) ----
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
 
-// ---- SendGrid 配置（从 functions params / .env.* 读取）----
+// ---- SendGrid configuration (read from functions params / .env.*) ----
 const SENDGRID_KEY = functionsConfig.defineString("SENDGRID_KEY");
-const SEND_FROM    = functionsConfig.defineString("SEND_FROM");    // 已验证域名邮箱
+const SEND_FROM    = functionsConfig.defineString("SEND_FROM");    // verified domain email
 const ADMIN_INBOX  = functionsConfig.defineString("ADMIN_INBOX");
 
 // ------------------ ① /countBooks ------------------
@@ -45,6 +45,7 @@ exports.getAllBooks = onRequest({ region: "australia-southeast2" }, async (req, 
 });
 
 // ------------------ ③ /sendFeedbackEmail ------------------
+// Utility functions for validation and attachment handling
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 function sanitizeFilename(name = "file") {
   return String(name).replace(/[^\w.\- ]+/g, "_").slice(0, 120) || "file";
@@ -107,7 +108,7 @@ exports.sendFeedbackEmail = onRequest({ region: "australia-southeast2" }, async 
       const limits = { maxCount: 2, maxEachBytes: 5 * 1024 * 1024, maxTotalBytes: 10 * 1024 * 1024 };
       const parsed = parseAttachments(attachments, limits);
 
-      // 写入反馈
+      // Save feedback to Firestore
       await db.collection("feedback").add({
         name: name.trim(),
         email: email.trim(),
@@ -122,7 +123,7 @@ exports.sendFeedbackEmail = onRequest({ region: "australia-southeast2" }, async 
       const from = SEND_FROM.value();
       const adminTo = ADMIN_INBOX.value();
 
-      // 管理员通知
+      // Notification email to admin
       const adminMsg = adminTo
         ? {
             to: adminTo,
@@ -133,7 +134,7 @@ exports.sendFeedbackEmail = onRequest({ region: "australia-southeast2" }, async 
           }
         : null;
 
-      // 用户回执（若不想带附件就删掉 attachments）
+      // Acknowledgement email to user
       const userMsg = {
         to: email,
         from,
@@ -201,8 +202,8 @@ exports.capitalizeBook = onDocumentCreated(
   }
 );
 
-// 同一用户同一课程只能报名一次（使用确定性文档ID + tx.create）
-// 还包含：OPTIONS 放行、容量健壮性、可选 idToken 校验
+// A user can book the same class only once (using deterministic document ID + tx.create)
+// Includes: OPTIONS handling, capacity check, optional idToken verification
 exports.bookClass = onRequest({ region: "australia-southeast2" }, async (req, res) => {
   cors(req, res, async () => {
     if (req.method === "OPTIONS") return res.status(204).send("");
@@ -211,7 +212,7 @@ exports.bookClass = onRequest({ region: "australia-southeast2" }, async (req, re
     try {
       let { userId, classId, idToken } = req.body || {};
 
-      // 如果前端传了 idToken，则以后端解出的 uid 为准（更安全）
+      // If idToken provided, decode it and override userId (for higher security)
       if (idToken) {
         const decoded = await admin.auth().verifyIdToken(idToken);
         userId = decoded.uid;
@@ -221,11 +222,11 @@ exports.bookClass = onRequest({ region: "australia-southeast2" }, async (req, re
         return res.status(400).json({ ok: false, error: "Missing userId or classId" });
       }
 
-      // 生成“唯一键”作为文档ID：<classId>_<userId>
+      // Generate deterministic document ID: <classId>_<userId>
       const bookingId = `${classId}_${userId}`;
 
       const result = await db.runTransaction(async (tx) => {
-        // 读课程
+        // Read class document
         const classRef = db.collection("classes").doc(classId);
         const classSnap = await tx.get(classRef);
         if (!classSnap.exists) throw new Error("Class not found");
@@ -235,14 +236,14 @@ exports.bookClass = onRequest({ region: "australia-southeast2" }, async (req, re
         const capacity = Number(cls.capacity || 0);
         if (capacity > 0 && enrolled >= capacity) throw new Error("Class is full");
 
-        // 【关键】用固定ID + create，若已存在则抛错 -> 达到唯一性
+        // Use deterministic ID + create() to ensure uniqueness
         const bookingRef = db.collection("bookings").doc(bookingId);
 
-        // 可选：提前读一下，给出更友好的错误信息
+        // Optional: pre-read for better user-friendly error message
         const existing = await tx.get(bookingRef);
         if (existing.exists) throw new Error("Already booked");
 
-        // 查邮箱（users 集合优先，其次 Auth）
+        // Fetch user email (prefer users collection, fallback to Auth)
         let userEmail = null;
         try {
           const uDoc = await db.collection("users").doc(userId).get();
@@ -253,7 +254,7 @@ exports.bookClass = onRequest({ region: "australia-southeast2" }, async (req, re
           }
         } catch (_) {}
 
-        // 只允许“创建”，避免被覆盖
+        // Create booking (no overwrite allowed)
         tx.create(bookingRef, {
           userId,
           userEmail: userEmail || null,
@@ -263,7 +264,7 @@ exports.bookClass = onRequest({ region: "australia-southeast2" }, async (req, re
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
-        // 报名数 +1
+        // Increment enrolled count
         tx.update(classRef, { enrolled: admin.firestore.FieldValue.increment(1) });
 
         return {
@@ -275,16 +276,15 @@ exports.bookClass = onRequest({ region: "australia-southeast2" }, async (req, re
 
       return res.json({ ok: true, ...result });
     } catch (e) {
-      // Firestore 已存在时 tx.create 会抛错 -> 转成 Already booked
       const msg = (e && e.message) || String(e);
       return res.status(400).json({ ok: false, error: msg.includes("Already booked") ? "Already booked" : msg });
     }
   });
 });
 
-// 取消报名（同一用户对同一课程的 bookingId = <classId>_<userId>）
-// - 支持 OPTIONS、CORS、idToken（优先用后端解出的 uid）
-// - 事务里：确认 booking 存在 -> 删除 booking -> 安全地将 enrolled -1（不小于 0）
+// Cancel booking (each bookingId = <classId>_<userId>)
+// - Supports OPTIONS, CORS, and idToken (uid preferred)
+// - Within transaction: confirm booking exists -> delete booking -> safely decrement enrolled count
 exports.cancelClass = onRequest({ region: "australia-southeast2" }, async (req, res) => {
   cors(req, res, async () => {
     if (req.method === "OPTIONS") return res.status(204).send("");
@@ -293,7 +293,7 @@ exports.cancelClass = onRequest({ region: "australia-southeast2" }, async (req, 
     try {
       let { userId, classId, idToken } = req.body || {};
 
-      // 若前端提供 idToken，则以校验后的 uid 为准
+      // If idToken provided, decode it for verified uid
       if (idToken) {
         const decoded = await admin.auth().verifyIdToken(idToken);
         userId = decoded.uid;
@@ -308,15 +308,15 @@ exports.cancelClass = onRequest({ region: "australia-southeast2" }, async (req, 
         const classRef = db.collection("classes").doc(classId);
         const bookingRef = db.collection("bookings").doc(bookingId);
 
-        // 读报名文档：必须存在才能取消
+        // Read booking: must exist before cancel
         const [classSnap, bookingSnap] = await Promise.all([tx.get(classRef), tx.get(bookingRef)]);
         if (!classSnap.exists) throw new Error("Class not found");
         if (!bookingSnap.exists) throw new Error("Not booked");
 
-        // 删除报名
+        // Delete booking
         tx.delete(bookingRef);
 
-        // 安全递减 enrolled（不小于 0）
+        // Safely decrement enrolled count (not below 0)
         const cls = classSnap.data() || {};
         const enrolled = Number(cls.enrolled || 0);
         const next = Math.max(0, enrolled - 1);
@@ -332,7 +332,6 @@ exports.cancelClass = onRequest({ region: "australia-southeast2" }, async (req, 
       return res.json({ ok: true, ...result });
     } catch (e) {
       const msg = (e && e.message) || String(e);
-      // 输出更友好的错误消息
       let reason = msg;
       if (msg.includes("Not booked")) reason = "Not booked";
       if (msg.includes("Class not found")) reason = "Class not found";
@@ -341,8 +340,7 @@ exports.cancelClass = onRequest({ region: "australia-southeast2" }, async (req, 
   });
 });
 
-
-// ------------------ ⑤ /sendClassReminder （群发课程提醒）------------------
+// ------------------ ⑤ /sendClassReminder (bulk class reminder) ------------------
 exports.sendClassReminder = onRequest({ region: "australia-southeast2" }, async (req, res) => {
   cors(req, res, async () => {
     try {
@@ -350,7 +348,7 @@ exports.sendClassReminder = onRequest({ region: "australia-southeast2" }, async 
         return res.status(405).json({ ok: false, error: "Only POST is allowed" });
       }
 
-      // ✅ 读取 SendGrid 配置
+      // ✅ Load SendGrid config
       const sgKey = SENDGRID_KEY.value();
       const from = SEND_FROM.value();
       const adminBcc = ADMIN_INBOX.value() || undefined;
@@ -359,27 +357,26 @@ exports.sendClassReminder = onRequest({ region: "australia-southeast2" }, async 
       }
       sgMail.setApiKey(sgKey);
 
-      // ✅ 请求体参数
+      // ✅ Request parameters
       const {
         classId,
-        subject,   // 可自定义标题
-        text,      // 可自定义文本正文
-        html,      // 可自定义 HTML 正文
-        dryRun,    // true 时只返回收件人清单，不发送
-        max = 200  // 群发上限（默认 200）
+        subject,
+        text,
+        html,
+        dryRun,
+        max = 200
       } = req.body || {};
 
       if (!classId) return res.status(400).json({ ok: false, error: "classId is required" });
 
-      // ✅ 读取课程信息
+      // ✅ Fetch class info
       const classSnap = await db.collection("classes").doc(classId).get();
       if (!classSnap.exists) return res.status(404).json({ ok: false, error: "Class not found" });
       const cls = classSnap.data();
 
-      // ✅ 构建基础返回信息（即使无人发送也有）
       const base = { ok: true, class: { id: classId, name: cls.name, time: cls.time } };
 
-      // ✅ 查找报名记录
+      // ✅ Find all bookings
       const bookSnap = await db.collection("bookings").where("classId", "==", classId).get();
       const uids = Array.from(new Set(bookSnap.docs.map(d => d.data().userId).filter(Boolean)));
 
@@ -387,7 +384,7 @@ exports.sendClassReminder = onRequest({ region: "australia-southeast2" }, async 
         return res.status(200).json({ ...base, sent: 0, recipients: [] });
       }
 
-      // ✅ 获取所有用户邮箱（从 users 集合或 Auth）
+      // ✅ Fetch user emails from users collection or Auth
       const emails = [];
       for (const uid of uids) {
         try {
@@ -399,24 +396,22 @@ exports.sendClassReminder = onRequest({ region: "australia-southeast2" }, async 
           }
           const authUser = await admin.auth().getUser(uid);
           if (authUser?.email) emails.push(String(authUser.email));
-        } catch (_) {
-          // 单个用户错误不影响整体
-        }
+        } catch (_) {}
       }
 
-      // ✅ 去重 + 限制数量
+      // ✅ Remove duplicates and limit count
       const unique = Array.from(new Set(emails)).slice(0, Math.max(0, Math.min(Number(max) || 0, 2000)) || 200);
 
       if (unique.length === 0) {
         return res.status(200).json({ ...base, sent: 0, recipients: [] });
       }
 
-      // ✅ dryRun 模式
+      // ✅ dryRun mode
       if (dryRun) {
         return res.status(200).json({ ...base, dryRun: true, count: unique.length, recipients: unique });
       }
 
-      // ✅ 默认邮件模板（若前端未传自定义内容）
+      // ✅ Default message template
       const defaultSubject = `Reminder: ${cls.name} at ${cls.time}`;
       const defaultText =
         `This is a reminder for your class booking:\n\n` +
@@ -428,7 +423,7 @@ exports.sendClassReminder = onRequest({ region: "australia-southeast2" }, async 
         `<p><b>Class:</b> ${cls.name}<br/><b>Time:</b> ${cls.time}</p>` +
         `<p>See you soon!</p>`;
 
-      // ✅ 发送群发邮件
+      // ✅ Send batch email
       const msg = {
         to: unique,
         from,
@@ -455,8 +450,8 @@ exports.sendClassReminder = onRequest({ region: "australia-southeast2" }, async 
   });
 });
 
-// ✅ 公开只读接口：返回 classes 集合数据（安全字段白名单）
-//    支持：CORS、OPTIONS 预检、GET 方法；可选 limit/orderBy；带缓存头
+// ✅ Public read-only API: returns class data (safe field whitelist)
+//    Supports: CORS, OPTIONS preflight, GET method; optional limit/orderBy; adds cache headers
 exports.publicClasses = onRequest(
   { region: "australia-southeast2" },
   async (req, res) => {
@@ -465,7 +460,7 @@ exports.publicClasses = onRequest(
       if (req.method !== "GET") return res.status(405).send("Method Not Allowed");
 
       try {
-        // 可选查询参数：?limit=50&orderBy=time
+        // Optional query params: ?limit=50&orderBy=time
         const { limit, orderBy } = req.query || {};
         let q = db.collection("classes");
         if (orderBy) q = q.orderBy(String(orderBy));
@@ -473,7 +468,7 @@ exports.publicClasses = onRequest(
 
         const snap = await q.get();
 
-        // 安全字段白名单（不要把敏感字段暴露出去）
+        // Safe field whitelist (avoid exposing sensitive data)
         const SAFE_FIELDS = ["name", "time", "capacity", "enrolled"];
 
         const data = snap.docs.map(d => {
@@ -483,7 +478,7 @@ exports.publicClasses = onRequest(
           return { id: d.id, ...safe };
         });
 
-        // 给公开接口加缓存（视情况可调）
+        // Add cache headers for public API
         res.set("Cache-Control", "public, max-age=60, s-maxage=300");
         return res.status(200).json({ ok: true, count: data.length, data });
       } catch (e) {
@@ -493,6 +488,3 @@ exports.publicClasses = onRequest(
     });
   }
 );
-
-
-

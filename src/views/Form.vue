@@ -1,10 +1,10 @@
 <template>
-  <!-- 主内容 landmark，供“Skip to main content” 跳转 -->
+  <!-- Main content landmark, used for “Skip to main content” navigation -->
   <main id="main-content" class="container py-4 text-start" style="max-width: 640px"
         aria-labelledby="form-title">
     <h1 id="form-title" class="mb-3">Feedback Form</h1>
 
-    <!-- aria-describedby 关联整体说明（可选） -->
+    <!-- aria-describedby links to overall instructions (optional) -->
     <p id="form-help" class="visually-hidden">
       Required fields are marked and errors will be announced.
     </p>
@@ -100,7 +100,7 @@ function submit() {
   errors.name = "";
   errors.email = "";
 
-  // 基本校验（并向屏幕阅读器播报）
+  // Basic validation (with screen reader announcements)
   if (!form.name || form.name.length < 2) {
     errors.name = "Please enter at least 2 characters for your name.";
   }
@@ -115,7 +115,7 @@ function submit() {
     return;
   }
 
-  // Demo：存本地
+  // Demo: save locally
   const list = JSON.parse(localStorage.getItem("feedback_v1") || "[]");
   list.push({ ...form, at: new Date().toISOString() });
   localStorage.setItem("feedback_v1", JSON.stringify(list));
@@ -124,13 +124,13 @@ function submit() {
 </script>
 
 <style scoped>
-/* 可见焦点与最小对比（WCAG 1.4.3 / 2.4.7） */
+/* Visible focus and minimum contrast (WCAG 1.4.3 / 2.4.7) */
 .form-control:focus, .btn:focus {
   outline: 3px solid #ffcc00;
   outline-offset: 2px;
 }
 
-/* 屏幕阅读器可见、视觉上隐藏（WCAG 常用工具类） */
+/* Screen reader accessible but visually hidden (WCAG utility class) */
 .visually-hidden {
   position: absolute !important;
   height: 1px; width: 1px;

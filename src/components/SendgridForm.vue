@@ -56,8 +56,8 @@ import { ref, reactive, computed } from 'vue';
 
 /**
  * Props
- * - endpoint: 可传入 Cloud Function URL（优先使用）。
- *   若未传，则读取环境变量 VITE_SENDFEEDBACK_URL。
+ * - endpoint: Custom Cloud Function URL (optional).
+ *   If not provided, it will use the environment variable VITE_SENDFEEDBACK_URL.
  */
 const props = defineProps({
   endpoint: { type: String, default: '' }
@@ -99,9 +99,10 @@ function reset() {
   Object.keys(errors).forEach(k => errors[k] = '');
 }
 
+// Handle file input changes
 function onFilesChange(e) {
   const files = Array.from(e.target.files || []);
-  form.files = files.slice(0, 2); // 限制最多 2 个
+  form.files = files.slice(0, 2); // limit to 2 files
   fileInfo.value = form.files;
 }
 
@@ -109,6 +110,7 @@ function validEmail(e) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e || '');
 }
 
+// Validate input fields
 function validate() {
   let ok = true;
   errors.name = '';
@@ -130,7 +132,7 @@ function validate() {
   return ok;
 }
 
-// 将 File 转为 base64
+// Convert a File to base64
 async function fileToBase64(file) {
   const buf = await file.arrayBuffer();
   let binary = '';
@@ -158,7 +160,7 @@ async function onSubmit() {
     statusText.value = 'Sending…';
     debugText.value = '';
 
-    // 处理附件
+    // Process attachments
     const attachments = [];
     for (const f of form.files.slice(0, 2)) {
       attachments.push({
