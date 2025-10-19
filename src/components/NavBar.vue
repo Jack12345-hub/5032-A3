@@ -1,101 +1,94 @@
 <template>
-  <!-- 跳过导航的快捷键（键盘用户 Tab 一下能直接跳到主内容） -->
+  <!-- Skip link：键盘用户可快速跳到主内容 -->
   <a class="skip-link" href="#main-content">Skip to main content</a>
 
-  <nav class="navbar navbar-dark bg-dark navbar-expand"
-       role="navigation"
-       aria-label="Main navigation">
+  <nav class="navbar navbar-dark bg-dark navbar-expand" role="navigation" aria-label="Main navigation">
     <div class="container">
       <RouterLink to="/" class="navbar-brand" aria-label="Go to Home">My Gym App</RouterLink>
 
+      <!-- 折叠按钮：同步 aria-expanded -->
       <button
         class="navbar-toggler"
         type="button"
         data-bs-toggle="collapse"
         data-bs-target="#mainNav"
+        :aria-expanded="isExpanded ? 'true' : 'false'"
         aria-controls="mainNav"
-        aria-expanded="false"
         aria-label="Toggle navigation menu"
+        @click="toggleExpanded"
       >
         <span class="navbar-toggler-icon" aria-hidden="true"></span>
       </button>
 
-      <div id="mainNav" class="collapse navbar-collapse">
-        <ul class="navbar-nav ms-auto" role="menubar" aria-label="Primary">
-          <li class="nav-item" role="none">
-            <RouterLink to="/" class="nav-link" role="menuitem">Home</RouterLink>
+      <div id="mainNav" class="collapse navbar-collapse" ref="navCollapse">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item">
+            <RouterLink to="/" class="nav-link" @click="collapseIfMobile">Home</RouterLink>
           </li>
 
-          <li class="nav-item" role="none">
-            <RouterLink to="/members" class="nav-link" role="menuitem" active-class="active">
-              Members
-            </RouterLink>
+          <li class="nav-item">
+            <RouterLink to="/members" class="nav-link" @click="collapseIfMobile">Members</RouterLink>
           </li>
 
-          <li class="nav-item" role="none">
-            <RouterLink to="/classes" class="nav-link" role="menuitem" active-class="active">
-              Classes
-            </RouterLink>
+          <li class="nav-item">
+            <RouterLink to="/classes" class="nav-link" @click="collapseIfMobile">Classes</RouterLink>
           </li>
 
-          <li class="nav-item" role="none">
-            <RouterLink to="/form" class="nav-link" role="menuitem">Form</RouterLink>
+          <li class="nav-item">
+            <RouterLink to="/form" class="nav-link" @click="collapseIfMobile">Form</RouterLink>
           </li>
 
-          <li class="nav-item" role="none">
-            <RouterLink to="/about" class="nav-link" role="menuitem">About</RouterLink>
+          <li class="nav-item">
+            <RouterLink to="/about" class="nav-link" @click="collapseIfMobile">About</RouterLink>
           </li>
 
           <!-- Gym Map -->
-          <li class="nav-item" role="none">
-            <RouterLink to="/map"
-                        class="nav-link"
-                        role="menuitem"
-                        aria-label="Open Gym Map showing nearby gyms"
-                        active-class="active">
+          <li class="nav-item">
+            <RouterLink
+              to="/map"
+              class="nav-link"
+              aria-label="Open Gym Map showing nearby gyms"
+              @click="collapseIfMobile"
+            >
               🗺️ Gym Map
             </RouterLink>
           </li>
 
-<li class="nav-item">
-  <RouterLink to="/book" class="nav-link">Book</RouterLink>
-</li>    
+          <li class="nav-item">
+            <RouterLink to="/book" class="nav-link" @click="collapseIfMobile">Book</RouterLink>
+          </li>
 
-<li class="nav-item">
-  <RouterLink to="/analytics" class="nav-link">Analytics</RouterLink>
-</li>
+          <li class="nav-item">
+            <RouterLink to="/analytics" class="nav-link" @click="collapseIfMobile">Analytics</RouterLink>
+          </li>
 
-<li class="nav-item">
-<router-link to="/public-classes" class="nav-link">Public API</router-link>
-</li>
+          <li class="nav-item">
+            <RouterLink to="/public-classes" class="nav-link" @click="collapseIfMobile">Public API</RouterLink>
+          </li>
 
-<li class="nav-item" role="none">
-            <RouterLink class="nav-link" :to="{ name: 'email-test' }" role="menuitem">
-              Email Test
-            </RouterLink>
+          <li class="nav-item">
+            <RouterLink :to="{ name: 'email-test' }" class="nav-link" @click="collapseIfMobile">Email Test</RouterLink>
           </li>
 
           <!-- 登录/注册 -->
-          <li class="nav-item" v-if="!session.isAuthed" role="none">
-            <RouterLink to="/firelogin" class="nav-link" role="menuitem">Login</RouterLink>
+          <li class="nav-item" v-if="!session.isAuthed">
+            <RouterLink to="/firelogin" class="nav-link" @click="collapseIfMobile">Login</RouterLink>
           </li>
-          <li class="nav-item" v-if="!session.isAuthed" role="none">
-            <RouterLink to="/fireregister" class="nav-link" role="menuitem">Register</RouterLink>
+          <li class="nav-item" v-if="!session.isAuthed">
+            <RouterLink to="/fireregister" class="nav-link" @click="collapseIfMobile">Register</RouterLink>
           </li>
 
           <!-- Admin -->
-          <li class="nav-item" v-if="session.isAdmin" role="none">
-            <RouterLink to="/admin" class="nav-link" role="menuitem">Admin</RouterLink>
+          <li class="nav-item" v-if="session.isAdmin">
+            <RouterLink to="/admin" class="nav-link" @click="collapseIfMobile">Admin</RouterLink>
           </li>
 
           <!-- 已登录状态 -->
-          <li class="nav-item d-flex align-items-center" v-if="session.isAuthed" role="none">
-            <span class="navbar-text small me-2" aria-live="polite">
+          <li class="nav-item d-flex align-items-center" v-if="session.isAuthed">
+            <span class="navbar-text small me-2" role="status" aria-live="polite">
               {{ session.profile?.email || session.user?.email }}
             </span>
-            <button class="btn btn-sm btn-outline-light"
-                    type="button"
-                    @click="doLogout">
+            <button class="btn btn-sm btn-outline-light" type="button" @click="doLogout">
               Logout
             </button>
           </li>
@@ -106,12 +99,31 @@
 </template>
 
 <script setup>
+import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
 import { session } from "../store/session";
 
 const router = useRouter();
+const isExpanded = ref(false);
+const navCollapse = ref(null);
+
+function toggleExpanded() {
+  isExpanded.value = !isExpanded.value;
+}
+
+// 在移动端点击导航项后自动收起折叠导航
+function collapseIfMobile() {
+  if (!navCollapse.value) return;
+  const hasShow = navCollapse.value.classList.contains("show");
+  if (hasShow) {
+    const btn = document.querySelector('[data-bs-target="#mainNav"]');
+    btn?.click();
+    isExpanded.value = false;
+  }
+}
+
 async function doLogout() {
   try { await signOut(auth); } catch (e) { console.error("signOut failed:", e); }
   finally {
@@ -120,11 +132,18 @@ async function doLogout() {
     router.push("/firelogin");
   }
 }
+
+onMounted(() => {
+  isExpanded.value = false;
+});
 </script>
 
 <style scoped>
 /* 可见的键盘焦点（WCAG 2.4.7） */
-.nav-link:focus, .navbar-brand:focus, .btn:focus, .navbar-toggler:focus {
+.nav-link:focus,
+.navbar-brand:focus,
+.btn:focus,
+.navbar-toggler:focus {
   outline: 3px solid #ffc107; /* 高对比黄色 */
   outline-offset: 2px;
 }
@@ -142,46 +161,11 @@ async function doLogout() {
 .skip-link:focus {
   left: 8px;
   border-radius: 6px;
+  text-decoration: none;
+}
+
+/* 当前链接可用 aria-current="page" 自动标注；可自定义样式 */
+.nav-link[aria-current="page"] {
+  text-decoration: underline;
 }
 </style>
-
-          <!-- 被你注释掉的菜单保持不变 -->
-          <!-- ✅ 暂时隐藏 Add Book、Book Counter、API 等导航项 -->
-<!--
-<li class="nav-item">
-  <RouterLink to="/addbook" class="nav-link" active-class="active">
-    Add Book
-  </RouterLink>
-</li>
-
-<li class="nav-item">
-  <RouterLink to="/GetBookCount" class="nav-link" active-class="active">
-    Book Counter
-  </RouterLink>
-</li>
-
-<li class="nav-item">
-  <router-link to="/GetBookCount" class="nav-link" active-class="active">
-    Get Book Count
-  </router-link>
-</li>
-
-<li class="nav-item">
-  <router-link to="/WeatherCheck" class="nav-link" active-class="active">
-    Get Weather
-  </router-link>
-</li>
-
-<li class="nav-item">
-  <router-link to="/CountBookAPI" class="nav-link" active-class="active">
-    Count Book API
-  </router-link>
-</li>
-
-<li class="nav-item">
-  <router-link to="/GetAllBookAPI" class="nav-link" active-class="active">
-    Get All Book API
-  </router-link>
-</li>
--->
-

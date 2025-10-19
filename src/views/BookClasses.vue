@@ -1,22 +1,27 @@
 <template>
+  <!-- Skip link：键盘用户快速跳到主内容 -->
   <a href="#main" class="skip-link">Skip to main content</a>
 
-  <main id="main" class="wrap" tabindex="-1">
+  <main id="main" class="wrap" tabindex="-1" aria-label="Book a class page">
     <h1>📅 Book a Class</h1>
 
-    <!-- 状态提示 -->
+    <!-- 状态提示（读屏可读） -->
     <p v-if="loading" role="status" aria-live="polite">Loading...</p>
     <p v-if="err" class="text-danger" role="alert">{{ err }}</p>
+
+    <!-- 动态消息：聚焦到这里让读屏立即播报 -->
     <p
       v-if="msg"
       :class="{ ok: ok, err: !ok }"
       role="status"
       aria-live="polite"
+      tabindex="-1"
+      ref="statusEl"
     >
       {{ msg }}
     </p>
 
-    <!-- 无课程时：一键灌入示例数据 -->
+    <!-- 无课程：一键灌入示例数据 -->
     <div
       v-if="!loading && classes.length === 0"
       class="empty"
@@ -24,14 +29,24 @@
       aria-labelledby="emptyTitle"
     >
       <p id="emptyTitle">No classes found in Firestore.</p>
-      <button @click="seedClasses">Seed demo classes</button>
+      <button type="button" @click="seedClasses" aria-label="Insert demo classes">
+        Seed demo classes
+      </button>
     </div>
 
-    <!-- 列表 -->
-    <div v-else role="region" aria-labelledby="classTableTitle" :aria-busy="loading ? 'true' : 'false'">
+    <!-- 课程表 -->
+    <div
+      v-else
+      role="region"
+      aria-labelledby="classTableTitle"
+      :aria-busy="loading ? 'true' : 'false'"
+    >
       <h2 id="classTableTitle" class="visually-hidden">Available classes</h2>
+      <p id="tableHelp" class="visually-hidden">
+        Use the Action column to book or cancel a class. Full classes are disabled.
+      </p>
 
-      <table>
+      <table aria-labelledby="classTableTitle" aria-describedby="tableHelp">
         <caption class="caption">
           Class timetable with capacity and your booking status. Use the Action column to book or cancel.
         </caption>
@@ -45,7 +60,11 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="c in classes" :key="c.id">
+          <tr
+            v-for="c in classes"
+            :key="c.id"
+            :aria-busy="busyId === c.id || busyCancelId === c.id ? 'true' : 'false'"
+          >
             <th scope="row">{{ c.name }}</th>
             <td>{{ c.time }}</td>
             <td>{{ c.capacity }}</td>
@@ -54,11 +73,14 @@
               <!-- 已报名：显示 Cancel -->
               <button
                 v-if="isBooked(c.id)"
+                class="btn-cancel"
+                type="button"
                 :disabled="busyCancelId === c.id"
                 :aria-disabled="busyCancelId === c.id ? 'true' : 'false'"
-                :aria-label="busyCancelId === c.id ? 'Cancelling booking for ' + (c.name || c.id) : 'Cancel booking for ' + (c.name || c.id)"
+                :aria-label="busyCancelId === c.id
+                  ? 'Cancelling booking for ' + (c.name || c.id)
+                  : 'Cancel booking for ' + (c.name || c.id)"
                 @click="cancelClass(c.id)"
-                class="btn-cancel"
               >
                 {{ busyCancelId === c.id ? "Cancelling..." : "Cancel" }}
               </button>
@@ -66,25 +88,31 @@
               <!-- 未报名：显示 Book（满员时禁用） -->
               <button
                 v-else
+                type="button"
                 :disabled="c.enrolled >= c.capacity || busyId === c.id"
                 :aria-disabled="(c.enrolled >= c.capacity || busyId === c.id) ? 'true' : 'false'"
                 :title="c.enrolled >= c.capacity ? 'Class is full' : ''"
                 :aria-label="
                   c.enrolled >= c.capacity
-                    ? 'Class is full'
+                    ? `Class ${c.name || c.id} is full`
                     : (busyId === c.id
-                        ? 'Booking ' + (c.name || c.id)
-                        : 'Book ' + (c.name || c.id))
+                        ? `Booking ${c.name || c.id}`
+                        : `Book ${c.name || c.id}`)
                 "
                 @click="bookClass(c.id)"
               >
-                {{
-                  c.enrolled >= c.capacity
-                    ? "Full"
-                    : busyId === c.id
-                    ? "Booking..."
-                    : "Book"
-                }}
+                <span aria-hidden="true">
+                  {{
+                    c.enrolled >= c.capacity
+                      ? "Full"
+                      : busyId === c.id
+                      ? "Booking..."
+                      : "Book"
+                  }}
+                </span>
+                <span class="visually-hidden" v-if="c.enrolled >= c.capacity">
+                  — no spots available
+                </span>
               </button>
             </td>
           </tr>
@@ -95,7 +123,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch, nextTick } from "vue";
 import {
   getFirestore,
   collection,
@@ -132,6 +160,9 @@ const busyCancelId = ref("");
 
 // 当前用户已报名的 classId 集合
 const myBookings = ref(new Set());
+
+// 状态段落引用，用于焦点管理
+const statusEl = ref(null);
 
 /* ===========================
    加载课程
@@ -311,14 +342,20 @@ onMounted(async () => {
   await loadClasses();
   await loadMyBookings();
 
-  // 登录状态变化时，刷新“我的报名”集合
   onAuthStateChanged(auth, async () => {
     await loadMyBookings();
   });
 
-  // 路由进入后把焦点放到主内容，方便屏幕阅读器用户
+  // 进入路由后把焦点放到主内容，方便键盘/读屏用户
   const main = document.getElementById("main");
   if (main) main.focus();
+});
+
+// 当有新的 msg 时，将焦点移动到状态段落，便于读屏器播报
+watch(msg, async (val) => {
+  if (!val) return;
+  await nextTick();
+  statusEl.value?.focus();
 });
 </script>
 
@@ -378,13 +415,23 @@ a:focus,
   outline-offset: 2px;
 }
 
+#main:focus {
+  outline: 3px solid #1976d2;
+  outline-offset: 4px;
+}
+
 button {
   padding: 6px 12px;
   border: none;
   border-radius: 6px;
-  background-color: #f0d140;
-  color: #000; /* 浅黄背景搭配深字，提升对比度 */
+  background-color: #f0d140; /* 浅黄主题 */
+  color: #000;               /* 提升对比度 */
   cursor: pointer;
+}
+
+button:hover,
+button:focus-visible {
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, .2);
 }
 
 button:disabled,
