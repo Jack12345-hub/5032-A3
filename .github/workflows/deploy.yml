@@ -22,6 +22,8 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          VITE_OWM_KEY: ${{ secrets.VITE_OWM_KEY }}   
 
       - name: Create 404.html for SPA
         run: cp dist/index.html dist/404.html
