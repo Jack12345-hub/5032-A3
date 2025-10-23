@@ -83,7 +83,7 @@ const routes = [
   path: '/email-test',
   name: 'email-test',
   component: () => import('../components/SendgridForm.vue'),
-  meta: { public: true }            // ✅ 关键！
+  meta: { public: true }            // ✅ ！
 },
 
 
@@ -91,9 +91,10 @@ const routes = [
   { path: "/:pathMatch(.*)*", redirect: "/" },
 ];
 
-const router = createRouter({
-  history: createWebHistory(),
-  routes,
+
+  const router = createRouter({
+  history: createWebHistory(import.meta.env.BASE_URL), // ✅ Vite:  import.meta.env.BASE_URL
+  routes: [ /* ... */ ],
 });
 
 // -------------------- Auth Initialization --------------------
