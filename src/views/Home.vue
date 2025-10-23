@@ -47,7 +47,8 @@ const loaded = ref(false);
 // Load classes.json from the project root (public or /)
 onMounted(async () => {
   try {
-    const res = await fetch("/classes.json");
+    const url = `${import.meta.env.BASE_URL}classes.json`; // /5032-A3/classes.json
+    const res = await fetch(url);
     classes.value = await res.json();
   } catch (e) {
     console.error("Failed to load classes.json", e);
