@@ -92,18 +92,9 @@ const routes = [
 ];
 
 
-// ✅ 动态计算 base：如果 Vite 注入的是 './'，用当前路径当 base
-function computeBase() {
-  const injected = import.meta.env.BASE_URL; // 现在是 './'
-  if (injected !== './') return injected;     // 万一以后改环境，保持兼容
-  // 以当前页面路径为 base（保证以 / 结尾）
-  const p = window.location.pathname;
-  return p.endsWith('/') ? p : p.replace(/[^/]+$/, '');
-}
-
 const router = createRouter({
-  history: createWebHistory(computeBase()),
-  routes,
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes,                       
 });
 
 // -------------------- Auth Initialization --------------------

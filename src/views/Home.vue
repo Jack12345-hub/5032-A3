@@ -2,15 +2,16 @@
   <div class="container py-4 text-start">
     <h1 class="mb-3">Classes list</h1>
 
-    <div v-if="!loaded && !err" class="text-muted">Loading...</div>
-    <div v-if="err" class="alert alert-danger">{{ err }}</div>
+    <div v-if="!loaded" class="text-muted">Loading...</div>
 
-    <div v-for="c in classes" :key="c.id" class="card mb-3 shadow-sm" v-if="classes.length">
+    <div v-for="c in classes" :key="c.id" class="card mb-3 shadow-sm">
       <div class="card-body">
         <div class="d-flex align-items-center justify-content-between">
           <div>
             <h5 class="card-title mb-1">{{ c.title }}</h5>
-            <div class="text-muted">Level: {{ c.level }} · {{ c.duration }} mins</div>
+            <div class="text-muted">
+              Level: {{ c.level }} · {{ c.duration }} mins
+            </div>
           </div>
           <!-- Rating widget (requires login) -->
           <div class="ms-3">
@@ -31,8 +32,6 @@
         </div>
       </div>
     </div>
-
-    <div v-if="loaded && !err && !classes.length" class="text-muted">No classes.</div>
   </div>
 </template>
 
@@ -40,29 +39,19 @@
 import { ref, onMounted } from "vue";
 import Rating from "../components/Rating.vue";
 
+// Local state for class list and simple notes preview
 const classes = ref([]);
 const notes = ref({});
 const loaded = ref(false);
-const err = ref("");
 
+// Load classes.json from the project root (public or /)
 onMounted(async () => {
   try {
-    const base = import.meta.env.BASE_URL || '/';
-    const url =
-      (base.endsWith('/') ? base : base + '/') + 'classes.json';
-
-    console.log('[classes.json URL]', url); // 🔎 方便在控制台确认实际请求地址
-
+    const url = `${import.meta.env.BASE_URL}classes.json`; // /5032-A3/classes.json
     const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-    const data = await res.json();
-    if (!Array.isArray(data)) throw new Error('classes.json must be an array');
-
-    classes.value = data;
+    classes.value = await res.json();
   } catch (e) {
-    console.error('Failed to load classes.json', e);
-    err.value = 'Failed to load class list. Please check classes.json path and deployment.';
+    console.error("Failed to load classes.json", e);
   } finally {
     loaded.value = true;
   }
