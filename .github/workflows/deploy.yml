@@ -1,12 +1,15 @@
-name: Deploy to GitHub Pages
+name: Deploy to GH Pages & Cloudflare Pages
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
+
+permissions:
+  contents: write
 
 jobs:
-  build-and-deploy:
+  # 统一安装 & 构建两份产物（GH / CF）
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -15,24 +18,86 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
+      # ---------- Build for GitHub Pages ----------
+      - name: Build (GitHub Pages)
         run: npm run build
         env:
-          VITE_OWM_KEY: ${{ secrets.VITE_OWM_KEY }}   
+          # GitHub Pages 走子路径：/<repo>/
+          VITE_BASE: /${{ github.event.repository.name }}/
+          VITE_OWM_KEY: ${{ secrets.VITE_OWM_KEY }}
 
-      - name: Create 404.html for SPA
+      - name: Add 404.html for SPA (GH)
         run: cp dist/index.html dist/404.html
 
-      - name: Deploy
+      - name: Archive artifact (gh)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-gh
+          path: dist
+          if-no-files-found: error
+
+      # ---------- Build for Cloudflare Pages ----------
+      - name: Clean dist
+        run: rm -rf dist
+
+      - name: Build (Cloudflare Pages)
+        run: npm run build
+        env:
+          # Cloudflare Pages 走根路径：/
+          VITE_BASE: /
+          VITE_OWM_KEY: ${{ secrets.VITE_OWM_KEY }}
+
+      # 可选：为 SPA 添加 _redirects（若你仓库里没有此文件）
+      - name: Add _redirects for SPA (CF)
+        run: |
+          echo "/*  /index.html  200" > dist/_redirects
+
+      - name: Archive artifact (cf)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-cf
+          path: dist
+          if-no-files-found: error
+
+  # 部署到 GitHub Pages
+  deploy-gh:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifact (gh)
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-gh
+          path: dist
+
+      - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@4.1.4
         with:
           branch: gh-pages
           folder: dist
 
-permissions:
-  contents: write
+  # 部署到 Cloudflare Pages
+  deploy-cf:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifact (cf)
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-cf
+          path: dist
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: ${{ secrets.CLOUDFLARE_PROJECT_NAME }}
+          directory: dist
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}

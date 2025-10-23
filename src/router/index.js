@@ -93,9 +93,13 @@ const routes = [
 
 
 const router = createRouter({
+  // ✅ 关键：跟随 Vite 的 base，兼容 GH Pages 子路径与 Cloudflare 根路径
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes,                       
-});
+  routes,
+  scrollBehavior() {
+    return { top: 0 }
+  },
+})
 
 // -------------------- Auth Initialization --------------------
 // Ensures Firebase authentication state is restored (useful after a hard refresh)
